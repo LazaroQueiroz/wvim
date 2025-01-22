@@ -1,0 +1,1 @@
+module Editor.StatusBar where
