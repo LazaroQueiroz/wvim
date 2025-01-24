@@ -14,28 +14,28 @@ data Piece = Piece {
   pieceLength :: Int
 } deriving Show
 
-type PieceTable = ([Piece], Buffer, Buffer)
+type PieceTable = ([Piece], Buffer, Buffer, (Buffer, Int), [Int])
 
 -- Cria uma Piece Table vazia
 createPieceTable :: String -> PieceTable
 createPieceTable originalText = 
-    ([Piece Original 0 (length originalText)], originalText, "")
-
+    ([Piece Original 0 (length originalText)], originalText, "", ("", 0), (getLineSizesArray originalText 0 []))
 
 -- Insere texto na Piece Table
-insertText :: String -> Int -> PieceTable -> PieceTable
-insertText newText startIndex (pieces, originalBuffer, addBuffer) = 
+insertText :: String -> Int -> Int -> PieceTable -> PieceTable
+insertText newText startIndex linePos (pieces, originalBuffer, addBuffer, insertBuffer, sizesSeq) = 
     let newAddBuffer = addBuffer ++ newText
         newPiece = Piece Add (length addBuffer) (length newText)
         (before, after) = splitPieceCollection startIndex pieces
-    in (before ++ [newPiece] ++ after, originalBuffer, newAddBuffer)
+        newSizesSeq = (changeLineSize (length newText) linePos sizesSeq)
+    in (before ++ [newPiece] ++ after, originalBuffer, newAddBuffer, insertBuffer, newSizesSeq)
 
-deleteText :: Int -> Int -> PieceTable -> PieceTable
-deleteText startIndex length (pieces, originalBuffer, addBuffer) = 
+deleteText :: Int -> Int -> Int -> PieceTable -> PieceTable
+deleteText startIndex length linePos (pieces, originalBuffer, addBuffer, insertBuffer, sizesSeq) = 
     let (before1, after1) = splitPieceCollection startIndex pieces     
         (before2, after2) = splitPieceCollection length after1
-    in (before1 ++ after2, originalBuffer, addBuffer)
-
+        newSizesSeq = (changeLineSize (- length) linePos sizesSeq)
+    in (before1 ++ after2, originalBuffer, addBuffer, insertBuffer, newSizesSeq)
 
 splitPieceCollection :: Int -> [Piece] -> ([Piece], [Piece])
 splitPieceCollection startIndex pieces = 
@@ -60,11 +60,18 @@ splitPiece pos (Piece bufferType startIndex length)
 
 
 pieceTableToString :: PieceTable -> String
-pieceTableToString (pieces, originalBuffer, addBuffer) =
+pieceTableToString (pieces, originalBuffer, addBuffer, insertBuffer, sizesSeq) =
     foldl (\acc (Piece buf start len) ->
-                acc ++ case buf of
-                    Original -> take len (drop start originalBuffer)
-                    Add      -> take len (drop start addBuffer)
+                let (iBuff, startPos) = insertBuffer
+                in 
+                  if startPos == (length acc) then
+                    acc ++ iBuff ++ case buf of
+                        Original -> take len (drop start originalBuffer)
+                        Add      -> take len (drop start addBuffer)
+                  else 
+                    acc ++ case buf of
+                        Original -> take len (drop start originalBuffer)
+                        Add      -> take len (drop start addBuffer)
            ) "" pieces 
 
 pieceTableToLineArray :: PieceTable -> [String]
@@ -82,8 +89,39 @@ splitLines text =
 isLineTerminator :: Char -> Bool
 isLineTerminator char = (char == '\n') || (char == '\r')
   
+getLineSizesArray :: String -> Int -> [Int] -> [Int]
+getLineSizesArray "" lineSize sizesSeq = (reverse (lineSize : sizesSeq))
+getLineSizesArray text lineSize sizesSeq =
+  if (head text) == '\n' then (getLineSizesArray (tail text) 0 (lineSize : sizesSeq))
+  else (getLineSizesArray (tail text) (lineSize + 1) sizesSeq)
+ 
+changeLineSize :: Int -> Int -> [Int] -> [Int]
+changeLineSize textCharChange lineNumber sizesSeq = 
+  let before = (take lineNumber sizesSeq)
+      after = (drop (lineNumber + 1) sizesSeq)
+      lineSize = (head (drop lineNumber sizesSeq))
+  in (before ++ [lineSize + textCharChange] ++ after)
 
+-- countCharPosition text curPos curRow curColumn targetRow targetColumn =
+--   if curRow == targetRow && curColumn == targetColumn then curPos 
+--   else if (head text) == '\n' then (countCharPosition (tail text) (curPos + 1) (curRow + 1) 0 targetRow targetColumn)
+--   else (countCharPosition (tail text) (curPos + 1) curRow (curColumn + 1) targetRow targetColumn)
+  
 
-
-
+-- [3 4 14 22 99 34] <-
+-- [3 4 14] [22] [99 34]
+-- [3 4 14]++[25]++[99 34] = [3 4 14 25 99 34]
+--
+-- ------------------
+-- "lazaro\nrafael"
+-- posPiece = 8
+-- posGrid = (1 1)
+--
+-- --
+-- 0 0 1 2 3 4 5 6
+-- 0 l a z 
+-- 1 r a f a e l
+-- 2 c a r l o s
+-- 4
+--
   
