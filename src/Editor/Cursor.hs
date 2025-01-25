@@ -17,9 +17,16 @@ updateCursor 'l' (Cursor x y) = Cursor x (y + 1)         -- Move right
 updateCursor _ cursor = cursor                           -- No change
 
 
-newCursorPositionFromChar :: Cursor -> [Char] -> Cursor
-newCursorPositionFromChar (Cursor x y) "\n" =
+updateCursorPosition :: Cursor -> [Char] -> Int -> Cursor
+updateCursorPosition (Cursor x y) "\DEL" aboveLineSize =
+  if (x == 0) then
+    if (y == 0) then (Cursor x y)
+    else (Cursor x (y - 1))
+  else
+    if (y == 0) then (Cursor (x - 1) aboveLineSize)
+    else (Cursor x (y - 1))
+updateCursorPosition (Cursor x y) "\n" _ =
   (Cursor (x + 1) 0)
-newCursorPositionFromChar (Cursor x y) _ =
+updateCursorPosition (Cursor x y) _ _ =
   (Cursor x (y + 1))
 

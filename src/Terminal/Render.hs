@@ -13,13 +13,17 @@ moveCursor :: Cursor -> IO () -- type declaration
 moveCursor (Cursor x y) = setCursorPosition y x -- set cursor position comes from the library (Console.ANSI)
 
 hideCursor :: IO ()
-hideCursor = putStr "\ESC[?25l"
+hideCursor = do
+  putStr "\ESC[?25l"
+  hFlush stdout
 
 showCursor :: IO ()
-showCursor = putStr "\ESC[?25h"
+showCursor = do
+  putStr "\ESC[?25h"
+  hFlush stdout
 
 setTextColor :: String -> IO ()
-setTextColor color =
+setTextColor color = do
     putStr $ case color of
         "red"    -> "\ESC[31m"
         "green"  -> "\ESC[32m"
@@ -27,6 +31,7 @@ setTextColor color =
         "blue"   -> "\ESC[34m"
         "reset"  -> "\ESC[0m"
         _        -> "\ESC[0m"
+    hFlush stdout
 
 
 

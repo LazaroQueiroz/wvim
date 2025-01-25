@@ -1,52 +1,53 @@
 module Renderer where
 
-
 import System.IO(hFlush, stdout)
 import System.Console.ANSI(setCursorPosition)
 import Terminal.Render
 import Editor.Viewport
 import Editor.Cursor
 import Editor.EditorState
-import Editor.PieceTable
+import Editor.ExtendedPieceTable
+
+import Utils
 
 
-replaceChar :: String -> Char -> Char -> String -> String
-replaceChar ""  _ _ acc = acc
-replaceChar text targetChar changeChar acc = 
-  if (head text) == targetChar then (replaceChar (tail text) targetChar changeChar (acc ++ [changeChar]))
-  else (replaceChar (tail text) targetChar changeChar (acc ++ [(head text)]))
-
+-- Renders the current state of the editor: the Viewport (actual content of the file), the status bar (which contains essential information about the editor state and the file) and renders the correct state of the cursor (position and style).
+-- @param editorState :: EditorState -> current state of the editor.
 renderState :: EditorState -> IO ()
-renderState (EditorState mode pieceTable cursor viewport) = do
-  hideCursor
+renderState (EditorState mode extendedPieceTable cursor viewport) = do
   clearScreen
-  renderViewport pieceTable cursor viewport
-  -- renderStatusBar mode
+  renderViewport extendedPieceTable cursor viewport
+  -- renderStatusBar mode TODO: implement the rendering of the status bar.
   renderCursor mode cursor
-  showCursor
-  hFlush stdout
 
 
-renderViewport :: PieceTable -> Cursor -> Viewport -> IO ()
-renderViewport pieceTable (Cursor x y) viewport = do
-    let lines = (pieceTableToLineArray pieceTable)
-        (_, ogBuffer, addBuffer, (iBuffer, startPos), sizesSeq) = pieceTable
+-- Renders the viewport, meaning that it renders all the contents of the files given the current dimensions of the viewport.
+-- @param pieceTable :: PieceTable -> 
+renderViewport :: ExtendedPieceTable -> Cursor -> Viewport -> IO ()
+renderViewport extendedPieceTable (Cursor x y) viewport = do
+    let lines = (extendedPieceTableToLineArray extendedPieceTable)
+        (_, ogBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable
     printLines lines viewport 0
-    putStr ("Start pos: "++show startPos)
-    putStr (" | IBuffer: "++(replaceChar iBuffer '\n' '⌣' "")++" |")
-    putStr ("sizesSeq -> " ++ (show sizesSeq))
-    putStr (" cursor: " ++ (show x) ++ " " ++ (show y))
+    putStr ("Start pos: " ++ (show insertStartIndex))
+    putStr (" | IBuffer: " ++ (replace (replace insertBuffer '\n' '⌣' "") '\DEL' '*' ""))
+    putStr ("sizesSeq: " ++ (show linesSizes))
+    putStr ("| cursor: " ++ (show x) ++ " " ++ (show y))
+    hFlush stdout
 
+-- Renders the cursor in the terminal based on its position and style.
+-- @param mode :: Mode -
 renderCursor :: Mode -> Cursor -> IO ()
-renderCursor mode (Cursor x y) = do
-  case mode of
+renderCursor curMode (Cursor x y) = do
+  setCursorPosition x y
+  case curMode of
     Normal -> putStr "\ESC[1 q"
     Insert -> putStr "\ESC[5 q"
-  setCursorPosition x y
+  hFlush stdout
 
 
 printLines :: [String] -> Viewport -> Int -> IO ()
 printLines lines (Viewport columns rows initialRow initialColumn) row = do
+    hideCursor
     let viewport = (Viewport columns rows initialRow initialColumn)
     if row == (rows - 1) then
           putStr ""
@@ -58,6 +59,7 @@ printLines lines (Viewport columns rows initialRow initialColumn) row = do
               moveCursor (Cursor 0 row) 
               putStrLn (head lines)
               printLines (tail lines) viewport (row + 1)
+    showCursor
   
     
 

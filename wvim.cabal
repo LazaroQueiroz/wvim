@@ -83,7 +83,7 @@ executable haskell
                    Editor.FileManager
                    Editor.InsertMode
                    Editor.NormalMode
-                   Editor.PieceTable
+                   Editor.ExtendedPieceTable
                    Editor.StatusBar
                    Editor.Viewport
                    Terminal.Colors
