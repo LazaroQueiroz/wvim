@@ -10,28 +10,39 @@ import Editor.EditorState
 import Editor.PieceTable
 
 
+replaceChar :: String -> Char -> Char -> String -> String
+replaceChar ""  _ _ acc = acc
+replaceChar text targetChar changeChar acc = 
+  if (head text) == targetChar then (replaceChar (tail text) targetChar changeChar (acc ++ [changeChar]))
+  else (replaceChar (tail text) targetChar changeChar (acc ++ [(head text)]))
 
 renderState :: EditorState -> IO ()
 renderState (EditorState mode pieceTable cursor viewport) = do
   hideCursor
-  renderViewport pieceTable viewport
+  clearScreen
+  renderViewport pieceTable cursor viewport
   -- renderStatusBar mode
-  renderCursor cursor
+  renderCursor mode cursor
   showCursor
   hFlush stdout
 
 
-renderViewport :: PieceTable -> Viewport -> IO ()
-renderViewport pieceTable viewport = do
+renderViewport :: PieceTable -> Cursor -> Viewport -> IO ()
+renderViewport pieceTable (Cursor x y) viewport = do
     let lines = (pieceTableToLineArray pieceTable)
         (_, ogBuffer, addBuffer, (iBuffer, startPos), sizesSeq) = pieceTable
     printLines lines viewport 0
-    -- putStr ("Start pos: "++show startPos)
-    -- putStr (" | IBuffer: "++iBuffer++" |")
+    putStr ("Start pos: "++show startPos)
+    putStr (" | IBuffer: "++(replaceChar iBuffer '\n' '⌣' "")++" |")
+    putStr ("sizesSeq -> " ++ (show sizesSeq))
+    putStr (" cursor: " ++ (show x) ++ " " ++ (show y))
 
-
-renderCursor :: Cursor -> IO ()
-renderCursor (Cursor x y) = setCursorPosition x y
+renderCursor :: Mode -> Cursor -> IO ()
+renderCursor mode (Cursor x y) = do
+  case mode of
+    Normal -> putStr "\ESC[1 q"
+    Insert -> putStr "\ESC[5 q"
+  setCursorPosition x y
 
 
 printLines :: [String] -> Viewport -> Int -> IO ()

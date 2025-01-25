@@ -3,6 +3,8 @@ module Editor.PieceTable where
 
 import Data.Typeable
 import Prelude
+import Editor.Cursor
+import Utils
 
 data BufferType = Original | Add deriving (Show, Eq)
 
@@ -34,8 +36,7 @@ deleteText :: Int -> Int -> Int -> PieceTable -> PieceTable
 deleteText startIndex length linePos (pieces, originalBuffer, addBuffer, insertBuffer, sizesSeq) = 
     let (before1, after1) = splitPieceCollection startIndex pieces     
         (before2, after2) = splitPieceCollection length after1
-        newSizesSeq = (changeLineSize (- length) linePos sizesSeq)
-    in (before1 ++ after2, originalBuffer, addBuffer, insertBuffer, newSizesSeq)
+    in (before1 ++ after2, originalBuffer, addBuffer, insertBuffer, sizesSeq)
 
 splitPieceCollection :: Int -> [Piece] -> ([Piece], [Piece])
 splitPieceCollection startIndex pieces = 
@@ -98,14 +99,27 @@ isLineTerminator char = (char == '\n') || (char == '\r')
 getLineSizesArray :: String -> Int -> [Int] -> [Int]
 getLineSizesArray "" lineSize sizesSeq = (reverse (lineSize : sizesSeq))
 getLineSizesArray text lineSize sizesSeq =
-  if (head text) == '\n' then (getLineSizesArray (tail text) 0 ((lineSize + 1) : sizesSeq))
+  if (head text) == '\n' then (getLineSizesArray (tail text) 0 (lineSize : sizesSeq))
   else (getLineSizesArray (tail text) (lineSize + 1) sizesSeq)
- 
-changeLineSize :: Int -> Int -> [Int] -> [Int]
-changeLineSize charSizeChange lineNumber sizesSeq = 
-  let (before, after) = (splitAt lineNumber sizesSeq)
+
+cursorToPieceTablePos :: Cursor -> [Int] -> Int -> Int -> Int 
+cursorToPieceTablePos (Cursor x y) sizesSeq acc lineNum = 
+  if lineNum == x then acc + y
+  else (cursorToPieceTablePos (Cursor x y) (tail sizesSeq) (acc + (head sizesSeq)) (lineNum + 1))
+
+updateSizesSeq :: [Char] -> Cursor -> [Int] -> [Int]
+updateSizesSeq "\n" (Cursor x y) sizesSeq = 
+  let (before, after) = (splitAt x sizesSeq)
+      nthLine = (nth x sizesSeq)
+      withoutFirstAfter =
+        if (length after) == 0 then []
+        else (tail after)
+  in before ++ [y + 1] ++ [nthLine - y] ++ withoutFirstAfter
+updateSizesSeq inputChar (Cursor x y) sizesSeq = 
+  let (before, after) = (splitAt x sizesSeq)
       lineSize = (head after)
-  in (before ++ [lineSize + charSizeChange] ++ (tail after))
+  in (before ++ [lineSize + 1] ++ (tail after))
+
 
 -- countCharPosition text curPos curRow curColumn targetRow targetColumn =
 --   if curRow == targetRow && curColumn == targetColumn then curPos 

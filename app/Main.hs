@@ -28,7 +28,6 @@ getCharRaw = do
     else return [first]
 
 
-
 -- Main
 main :: IO ()
 main = do

@@ -2,7 +2,6 @@ module Editor.Cursor where
 
 import System.IO
 import System.Console.ANSI
-import Editor.PieceTable
 
 -- Initial Cursor Position
 data Cursor = Cursor { x :: Int, y :: Int } deriving Show 
@@ -17,10 +16,6 @@ updateCursor 'h' (Cursor x y) = Cursor x (max 0 (y - 1)) -- Move left
 updateCursor 'l' (Cursor x y) = Cursor x (y + 1)         -- Move right
 updateCursor _ cursor = cursor                           -- No change
 
-cursorToPieceTablePos :: Cursor -> [Int] -> Int -> Int -> Int 
-cursorToPieceTablePos (Cursor x y) sizesSeq acc lineNum = 
-  if lineNum == x then acc + y
-  else (cursorToPieceTablePos (Cursor x y) (tail sizesSeq) (acc + (head sizesSeq)) (lineNum + 1))
 
 newCursorPositionFromChar :: Cursor -> [Char] -> Cursor
 newCursorPositionFromChar (Cursor x y) "\n" =
