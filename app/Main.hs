@@ -27,6 +27,9 @@ getCharRaw = do
         else return [first] -- Treat as a single ESC press
     else return [first]
 
+
+
+-- Main
 main :: IO ()
 main = do
   Just (width, height) <- getTerminalSize

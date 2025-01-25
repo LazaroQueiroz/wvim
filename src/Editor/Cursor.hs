@@ -22,3 +22,9 @@ cursorToPieceTablePos (Cursor x y) sizesSeq acc lineNum =
   if lineNum == x then acc + y
   else (cursorToPieceTablePos (Cursor x y) (tail sizesSeq) (acc + (head sizesSeq)) (lineNum + 1))
 
+newCursorPositionFromChar :: Cursor -> [Char] -> Cursor
+newCursorPositionFromChar (Cursor x y) "\n" =
+  (Cursor (x + 1) 0)
+newCursorPositionFromChar (Cursor x y) _ =
+  (Cursor x (y + 1))
+

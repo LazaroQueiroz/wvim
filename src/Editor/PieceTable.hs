@@ -22,13 +22,13 @@ createPieceTable originalText =
     ([Piece Original 0 (length originalText)], originalText, "", ("", 0), (getLineSizesArray originalText 0 []))
 
 -- Insere texto na Piece Table
-insertText :: String -> Int -> Int -> PieceTable -> PieceTable
-insertText newText startIndex linePos (pieces, originalBuffer, addBuffer, insertBuffer, sizesSeq) = 
-    let newAddBuffer = addBuffer ++ newText
-        newPiece = Piece Add (length addBuffer) (length newText)
+insertText :: String -> Int -> PieceTable -> PieceTable
+insertText iBuffer startIndex (pieces, originalBuffer, addBuffer, insertBuffer, sizesSeq) = 
+    let newAddBuffer = addBuffer ++ iBuffer
+        newPiece = Piece Add (length addBuffer) (length iBuffer)
         (before, after) = splitPieceCollection startIndex pieces
-        newSizesSeq = (changeLineSize (length newText) linePos sizesSeq)
-    in (before ++ [newPiece] ++ after, originalBuffer, newAddBuffer, insertBuffer, newSizesSeq)
+        (_, startPos) = insertBuffer
+    in (before ++ [newPiece] ++ after, originalBuffer, newAddBuffer, ("", startPos), sizesSeq)
 
 deleteText :: Int -> Int -> Int -> PieceTable -> PieceTable
 deleteText startIndex length linePos (pieces, originalBuffer, addBuffer, insertBuffer, sizesSeq) = 
@@ -58,20 +58,26 @@ splitPiece pos (Piece bufferType startIndex length)
       ([(Piece bufferType startIndex pos)]
       ,[(Piece bufferType (startIndex + pos) (length - pos))])
 
-
 pieceTableToString :: PieceTable -> String
 pieceTableToString (pieces, originalBuffer, addBuffer, insertBuffer, sizesSeq) =
     foldl (\acc (Piece buf start len) ->
                 let (iBuff, startPos) = insertBuffer
+                    stringPiece = case buf of
+                        Original -> take len (drop start originalBuffer)
+                        Add      -> take len (drop start addBuffer)
+                    diffStartPos = ((length acc) + len)
                 in 
-                  if startPos == (length acc) then
-                    acc ++ iBuff ++ case buf of
-                        Original -> take len (drop start originalBuffer)
-                        Add      -> take len (drop start addBuffer)
-                  else 
-                    acc ++ case buf of
-                        Original -> take len (drop start originalBuffer)
-                        Add      -> take len (drop start addBuffer)
+                  if ((diffStartPos) >= startPos) && (startPos >= (length acc)) then 
+                    acc ++ (take (startPos - (length acc)) stringPiece) ++ iBuff ++ (drop (startPos - (length acc)) stringPiece)
+                  else acc ++ stringPiece
+                  -- if (startPos == (length acc)) then
+                  --   acc ++ iBuff ++ case buf of
+                  --       Original -> take len (drop start originalBuffer)
+                  --       Add      -> take len (drop start addBuffer)
+                  -- else 
+                  --   acc ++ case buf of
+                  --       Original -> take len (drop start originalBuffer)
+                  --       Add      -> take len (drop start addBuffer)
            ) "" pieces 
 
 pieceTableToLineArray :: PieceTable -> [String]
@@ -92,15 +98,14 @@ isLineTerminator char = (char == '\n') || (char == '\r')
 getLineSizesArray :: String -> Int -> [Int] -> [Int]
 getLineSizesArray "" lineSize sizesSeq = (reverse (lineSize : sizesSeq))
 getLineSizesArray text lineSize sizesSeq =
-  if (head text) == '\n' then (getLineSizesArray (tail text) 0 (lineSize : sizesSeq))
+  if (head text) == '\n' then (getLineSizesArray (tail text) 0 ((lineSize + 1) : sizesSeq))
   else (getLineSizesArray (tail text) (lineSize + 1) sizesSeq)
  
 changeLineSize :: Int -> Int -> [Int] -> [Int]
-changeLineSize textCharChange lineNumber sizesSeq = 
-  let before = (take lineNumber sizesSeq)
-      after = (drop (lineNumber + 1) sizesSeq)
-      lineSize = (head (drop lineNumber sizesSeq))
-  in (before ++ [lineSize + textCharChange] ++ after)
+changeLineSize charSizeChange lineNumber sizesSeq = 
+  let (before, after) = (splitAt lineNumber sizesSeq)
+      lineSize = (head after)
+  in (before ++ [lineSize + charSizeChange] ++ (tail after))
 
 -- countCharPosition text curPos curRow curColumn targetRow targetColumn =
 --   if curRow == targetRow && curColumn == targetColumn then curPos 

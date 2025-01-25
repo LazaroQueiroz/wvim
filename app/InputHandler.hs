@@ -7,6 +7,8 @@ import Editor.EditorState
 import Editor.Cursor
 
 handleKeyPress :: EditorState -> [Char] -> EditorState
+-- handleKeyPress state "\ESC" =
+--   state { mode = Normal }
 handleKeyPress state "\ESC[A" =
   state { cursor = (updateCursor 'k' (cursor state))}
 handleKeyPress state "\ESC[B" =

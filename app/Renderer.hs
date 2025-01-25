@@ -24,7 +24,11 @@ renderState (EditorState mode pieceTable cursor viewport) = do
 renderViewport :: PieceTable -> Viewport -> IO ()
 renderViewport pieceTable viewport = do
     let lines = (pieceTableToLineArray pieceTable)
+        (_, ogBuffer, addBuffer, (iBuffer, startPos), sizesSeq) = pieceTable
     printLines lines viewport 0
+    -- putStr ("Start pos: "++show startPos)
+    -- putStr (" | IBuffer: "++iBuffer++" |")
+
 
 renderCursor :: Cursor -> IO ()
 renderCursor (Cursor x y) = setCursorPosition x y
