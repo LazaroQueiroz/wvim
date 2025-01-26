@@ -1,1 +1,0 @@
- -- Interpretação de teclas combinadas 
