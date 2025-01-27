@@ -7,6 +7,7 @@ import Editor.Viewport
 import Editor.Cursor
 import Editor.EditorState
 import Editor.ExtendedPieceTable
+import System.Directory 
 
 import Utils
 
@@ -14,17 +15,17 @@ import Utils
 -- Renders the current state of the editor: the Viewport (actual content of the file), the status bar (which contains essential information about the editor state and the file) and renders the correct state of the cursor (position and style).
 -- @param editorState :: EditorState -> current state of the editor.
 renderState :: EditorState -> IO ()
-renderState (EditorState mode extendedPieceTable cursor viewport) = do
+renderState (EditorState mode extendedPieceTable cursor viewport filename) = do
   clearScreen
-  renderViewport extendedPieceTable cursor viewport
+  renderViewport extendedPieceTable cursor viewport filename
   -- renderStatusBar mode TODO: implement the rendering of the status bar.
   renderCursor mode cursor
 
 
 -- Renders the viewport, meaning that it renders all the contents of the files given the current dimensions of the viewport.
 -- @param pieceTable :: PieceTable -> 
-renderViewport :: ExtendedPieceTable -> Cursor -> Viewport -> IO ()
-renderViewport extendedPieceTable (Cursor x y) viewport = do
+renderViewport :: ExtendedPieceTable -> Cursor -> Viewport -> String -> IO ()
+renderViewport extendedPieceTable (Cursor x y) viewport filename = do
     let lines = (extendedPieceTableToLineArray extendedPieceTable)
         (_, ogBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable
     printLines lines viewport 0
@@ -32,6 +33,8 @@ renderViewport extendedPieceTable (Cursor x y) viewport = do
     putStr (" | IBuffer: " ++ (replace (replace insertBuffer '\n' '⌣' "") '\DEL' '*' ""))
     putStr ("sizesSeq: " ++ (show linesSizes))
     putStr ("| cursor: " ++ (show x) ++ " " ++ (show y))
+    dir <- getCurrentDirectory
+    putStr ("| dir: " ++ dir ++ filename)
     hFlush stdout
 
 -- Renders the cursor in the terminal based on its position and style.
