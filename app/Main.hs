@@ -47,15 +47,15 @@ main = do
   setTerminalConfiguration
 
   startingState <- case args of
-      [] -> return (defaultEditorState width height)  -- Default editor state if no args
-      [filename] -> do
-        exists <- doesFileExist filename  -- Check if file exists
+      [] -> return (defaultEditorState width height "")  -- Default editor state if no args
+      [nameOfTheFile] -> do
+        exists <- doesFileExist nameOfTheFile  -- Check if file exists
         if exists then do
-          file <- readFile filename  -- Read the file content
-          return (editorStateFromFile file width height filename)  -- Create EditorState from file
+          file <- readFile nameOfTheFile  -- Read the file content
+          return (editorStateFromFile file width height nameOfTheFile)  -- Create EditorState from file
         else do
-          return (defaultEditorState width height filename)  -- Return default state if file doesn't exist
-      _ -> return (defaultEditorState width height)  -- Fallback for extra arguments, use default state
+          return (defaultEditorState width height nameOfTheFile)  -- Return default state if file doesn't exist
+      _ -> return (defaultEditorState width height "")  -- Fallback for extra arguments, use default state
 
   eventLoop startingState
 
@@ -65,23 +65,20 @@ eventLoop :: EditorState -> IO ()
 eventLoop editorState = do
 
   renderState editorState
-  
-  let inputFunction = if (mode editorState == Command) then getLine else getCharRaw
+
+  let inputFunction = if (mode editorState) == Command then getLine else getCharRaw
 
   inputString <- inputFunction
 
-  newState <- if (mode editorState == Command) then do
-    handleCommandMode editorState inputString
-    (handleKeyPress (editorState { mode = Normal }) "")
-  else do
-    (handleKeyPress editorState inputString)
 
+  newState <- handleKeyPress editorState inputString
+              
   unless (not (isRunning editorState)) (eventLoop newState)
 
 -- Verifies if the current editor state is a valid (or running) state. If this is the case, return True, otherwise, False.
 -- @param editorState :: EditorState - current state of the editor.
 isRunning :: EditorState -> Bool
-isRunning (EditorState mode pieceTable cursor viewPort) = 
+isRunning (EditorState mode pieceTable cursor viewPort filename statusBar) = 
     case mode of
         Closed -> False
         _ -> True

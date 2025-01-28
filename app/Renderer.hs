@@ -7,6 +7,7 @@ import Editor.Viewport
 import Editor.Cursor
 import Editor.EditorState
 import Editor.ExtendedPieceTable
+import Editor.StatusBar
 import System.Directory 
 
 import Utils
@@ -15,10 +16,10 @@ import Utils
 -- Renders the current state of the editor: the Viewport (actual content of the file), the status bar (which contains essential information about the editor state and the file) and renders the correct state of the cursor (position and style).
 -- @param editorState :: EditorState -> current state of the editor.
 renderState :: EditorState -> IO ()
-renderState (EditorState mode extendedPieceTable cursor viewport filename) = do
+renderState (EditorState mode extendedPieceTable cursor viewport filename statusBar) = do
   clearScreen
   renderViewport extendedPieceTable cursor viewport filename
-  -- renderStatusBar mode TODO: implement the rendering of the status bar.
+  renderStatusBar mode viewport cursor filename (statusMode statusBar) (errorMessage statusBar)
   renderCursor mode cursor
 
 
@@ -29,13 +30,39 @@ renderViewport extendedPieceTable (Cursor x y) viewport filename = do
     let lines = (extendedPieceTableToLineArray extendedPieceTable)
         (_, ogBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable
     printLines lines viewport 0
-    putStr ("Start pos: " ++ (show insertStartIndex))
-    putStr (" | IBuffer: " ++ (replace (replace insertBuffer '\n' '⌣' "") '\DEL' '*' ""))
-    putStr ("sizesSeq: " ++ (show linesSizes))
-    putStr ("| cursor: " ++ (show x) ++ " " ++ (show y))
-    dir <- getCurrentDirectory
-    putStr ("| dir: " ++ dir ++ filename)
-    hFlush stdout
+
+renderStatusBar :: Mode -> Viewport -> Cursor -> String -> SBarMode -> String -> IO ()
+renderStatusBar mode viewport cursor filename sBarMode errorMsg = do
+    moveCursor (Cursor 0 (rows viewport))
+    case sBarMode of
+      NoException -> do
+        putStr ((showMode mode) ++ " | ")
+        putStr ("Path: " ++ filename ++ " | ")
+      otherwise -> do
+        putStr (errorMsg)
+    putStr (show ((x cursor) + 1) ++ ", " ++ (show ((y cursor) + 1)) ++ " |")
+    putStr (" " ++ (getLineProgress viewport cursor))
+
+
+showMode :: Mode -> String
+showMode mode =
+  case mode of
+    Normal -> "Normal"
+    Insert -> "Insert"
+    Command -> "Command"
+
+getLineProgress :: Viewport -> Cursor -> String
+getLineProgress viewport cursor = 
+  let coverPercentage = ((x cursor) `div` (rows viewport)) * 100
+      progress = 
+        if (coverPercentage == 100) then "Bot"
+        else if (coverPercentage == 0) then "Top"
+        else (show coverPercentage) ++ "%"
+  in progress
+
+  
+
+
 
 -- Renders the cursor in the terminal based on its position and style.
 -- @param mode :: Mode -
@@ -45,6 +72,7 @@ renderCursor curMode (Cursor x y) = do
   case curMode of
     Normal -> putStr "\ESC[1 q"
     Insert -> putStr "\ESC[5 q"
+    Command -> putStr "\ESC[5 q"
   hFlush stdout
 
 

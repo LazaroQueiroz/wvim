@@ -88,6 +88,8 @@ executable haskell
                    Editor.ExtendedPieceTable
                    Editor.StatusBar
                    Editor.Viewport
+                   InputHandler
+                   Renderer
                    Terminal.Colors
                    Terminal.Keyboard
                    Terminal.Render
