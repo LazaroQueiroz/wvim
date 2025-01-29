@@ -11,13 +11,17 @@ handleKeyPress :: EditorState -> [Char] -> IO EditorState
 -- handleKeyPress state "\ESC" =
 --   state { mode = Normal }
 handleKeyPress state "\ESC[A" = do
-  return state { cursor = (updateCursor 'k' (cursor state))}
+  let (_, _, _, _, _, lineSizes) = (extendedPieceTable state)
+  return state { cursor = (updateCursor 'k' (cursor state) lineSizes)}
 handleKeyPress state "\ESC[B" = do
-  return state { cursor = (updateCursor 'j' (cursor state))}
+  let (_, _, _, _, _, lineSizes) = (extendedPieceTable state)
+  return state { cursor = (updateCursor 'j' (cursor state) lineSizes)}
 handleKeyPress state "\ESC[C" = do
-  return state { cursor = (updateCursor 'l' (cursor state))}
+  let (_, _, _, _, _, lineSizes) = (extendedPieceTable state)
+  return state { cursor = (updateCursor 'l' (cursor state) lineSizes)}
 handleKeyPress state "\ESC[D" = do
-  return state { cursor = (updateCursor 'h' (cursor state))}
+  let (_, _, _, _, _, lineSizes) = (extendedPieceTable state)
+  return state { cursor = (updateCursor 'h' (cursor state) lineSizes)}
 handleKeyPress state inputChar = case mode state of
   Normal -> do
     newState <- (handleNormalMode state inputChar)

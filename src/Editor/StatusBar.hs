@@ -2,10 +2,11 @@ module Editor.StatusBar where
 
 import Prelude
 
-data SBarMode = Exception | NoException deriving (Show, Eq)
+data StatusMode = Exception | NoException deriving (Show, Eq)
  
 data StatusBar = StatusBar {
-  statusMode :: SBarMode,
+  statusMode :: StatusMode,
   errorMessage :: String
 } deriving Show
 
+-- comentario

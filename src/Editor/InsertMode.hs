@@ -32,7 +32,7 @@ handleInsertMode currentState "\DEL" = do
         else 
           let (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = (deleteText (insertStartIndex) 1 extPieceTable)
           in (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, newLinesSizes)
-  return currentState { extendedPieceTable = newExtendedPieceTable, cursor = (updateCursorPosition (cursor currentState) "\DEL" (nth x linesSizes))}
+  return currentState { extendedPieceTable = newExtendedPieceTable, cursor = (updateCursorPosition (cursor currentState) "\DEL" (nth x linesSizes)), fileStatus = NotSaved}
 
 
 -- Caso de inserção normal de caracteres
@@ -41,7 +41,7 @@ handleInsertMode currentState inputChar = do
       newInsertBuffer = insertBuffer ++ inputChar
       -- newStartPos = (cursorToPieceTablePos (Cursor x y) sizesSeq 0 0) - (length insertBuffer)
       newLinesSizes = (updateLinesSizes inputChar (cursor currentState) linesSizes)
-  return currentState { extendedPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes), cursor = (updateCursorPosition (cursor currentState) inputChar 0)}
+  return currentState { extendedPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes), cursor = (updateCursorPosition (cursor currentState) inputChar 0), fileStatus = NotSaved}
 
 -- -- Creates a function to transform a single string buffer into a 
 -- -- array of strings, where each string represents a line in the grid

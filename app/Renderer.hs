@@ -16,7 +16,7 @@ import Utils
 -- Renders the current state of the editor: the Viewport (actual content of the file), the status bar (which contains essential information about the editor state and the file) and renders the correct state of the cursor (position and style).
 -- @param editorState :: EditorState -> current state of the editor.
 renderState :: EditorState -> IO ()
-renderState (EditorState mode extendedPieceTable cursor viewport filename statusBar) = do
+renderState (EditorState mode extendedPieceTable cursor viewport fileStatus filename statusBar) = do
   clearScreen
   renderViewport extendedPieceTable cursor viewport filename
   renderStatusBar mode viewport cursor filename (statusMode statusBar) (errorMessage statusBar)
@@ -31,7 +31,7 @@ renderViewport extendedPieceTable (Cursor x y) viewport filename = do
         (_, ogBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable
     printLines lines viewport 0
 
-renderStatusBar :: Mode -> Viewport -> Cursor -> String -> SBarMode -> String -> IO ()
+renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> IO ()
 renderStatusBar mode viewport cursor filename sBarMode errorMsg = do
     moveCursor (Cursor 0 (rows viewport))
     case sBarMode of

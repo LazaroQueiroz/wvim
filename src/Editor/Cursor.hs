@@ -2,6 +2,7 @@ module Editor.Cursor where
 
 import System.IO
 import System.Console.ANSI
+import Utils
 
 -- Initial Cursor Position
 data Cursor = Cursor { x :: Int, y :: Int } deriving Show 
@@ -9,12 +10,24 @@ data Cursor = Cursor { x :: Int, y :: Int } deriving Show
 
 -- Update cursor position based on input
 -- Pattern Matching: works like a switch case based on the inputs to the function.
-updateCursor :: Char -> Cursor -> Cursor
-updateCursor 'k' (Cursor x y) = Cursor (max 0 (x - 1)) y -- Move up
-updateCursor 'j' (Cursor x y) = Cursor (x + 1) y         -- Move down
-updateCursor 'h' (Cursor x y) = Cursor x (max 0 (y - 1)) -- Move left
-updateCursor 'l' (Cursor x y) = Cursor x (y + 1)         -- Move right
-updateCursor _ cursor = cursor                           -- No change
+updateCursor :: Char -> Cursor -> [Int] -> Cursor
+updateCursor 'k' (Cursor x y) lineSizes = 
+  let newX = (max 0 (x - 1))
+      newY = (min ((nth (newX + 1) lineSizes) - 1) y)
+  in Cursor newX newY         -- Move up
+updateCursor 'j' (Cursor x y) lineSizes = 
+  let newX = (min ((length lineSizes) - 1) (x + 1))
+      newY = (min (nth (newX + 1) lineSizes) y)
+  in Cursor newX newY         -- Move down
+updateCursor 'h' (Cursor x y) lineSizes =
+  let newX = x
+      newY = (max 0 (y - 1))
+  in Cursor newX newY         -- Move left
+updateCursor 'l' (Cursor x y) lineSizes =
+  let newX = x
+      newY = (min ((nth (x + 1) lineSizes)) (y + 1))
+  in Cursor newX newY         -- Move right
+updateCursor _ cursor lineSizes = cursor                           -- No change
 
 
 updateCursorPosition :: Cursor -> [Char] -> Int -> Cursor

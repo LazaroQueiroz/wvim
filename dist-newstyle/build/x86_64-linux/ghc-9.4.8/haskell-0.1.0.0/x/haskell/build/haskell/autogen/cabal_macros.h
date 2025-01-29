@@ -50,6 +50,16 @@
   (major1) == 0 && (major2) <  3 || \
   (major1) == 0 && (major2) == 3 && (minor) <= 6)
 #endif /* MIN_VERSION_filemanip */
+/* package unix-2.7.3 */
+#ifndef VERSION_unix
+#define VERSION_unix "2.7.3"
+#endif /* VERSION_unix */
+#ifndef MIN_VERSION_unix
+#define MIN_VERSION_unix(major1,major2,minor) (\
+  (major1) <  2 || \
+  (major1) == 2 && (major2) <  7 || \
+  (major1) == 2 && (major2) == 7 && (minor) <= 3)
+#endif /* MIN_VERSION_unix */
 
 /* tool gcc-13 */
 #ifndef TOOL_VERSION_gcc

@@ -78,7 +78,7 @@ eventLoop editorState = do
 -- Verifies if the current editor state is a valid (or running) state. If this is the case, return True, otherwise, False.
 -- @param editorState :: EditorState - current state of the editor.
 isRunning :: EditorState -> Bool
-isRunning (EditorState mode pieceTable cursor viewPort filename statusBar) = 
+isRunning (EditorState mode pieceTable cursor viewPort fileStatus filename statusBar) = 
     case mode of
         Closed -> False
         _ -> True
