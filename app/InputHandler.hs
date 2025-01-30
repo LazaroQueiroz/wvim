@@ -10,19 +10,15 @@ import Editor.InsertMode
 import Editor.NormalMode
 
 handleKeyPress :: EditorState -> [Char] -> IO EditorState
-handleKeyPress state "\ESC[A" = do
+handleKeyPress state key = do
   let (_, _, _, _, _, lineSizes) = extendedPieceTable state
-  return state{cursor = updateCursor 'k' (cursor state) lineSizes}
-handleKeyPress state "\ESC[B" = do
-  let (_, _, _, _, _, lineSizes) = extendedPieceTable state
-  return state{cursor = updateCursor 'j' (cursor state) lineSizes}
-handleKeyPress state "\ESC[C" = do
-  let (_, _, _, _, _, lineSizes) = extendedPieceTable state
-  return state{cursor = updateCursor 'l' (cursor state) lineSizes}
-handleKeyPress state "\ESC[D" = do
-  let (_, _, _, _, _, lineSizes) = extendedPieceTable state
-  return state{cursor = updateCursor 'h' (cursor state) lineSizes}
-handleKeyPress state inputChar = case mode state of
-  Normal -> do handleNormalMode state inputChar
-  Insert -> do handleInsertMode state inputChar
-  Command -> do handleCommandMode state inputChar
+      isInsertMode = mode state == Insert
+  case key of
+    "\ESC[A" -> return state{cursor = updateCursor 'k' (cursor state) lineSizes isInsertMode}
+    "\ESC[B" -> return state{cursor = updateCursor 'j' (cursor state) lineSizes isInsertMode}
+    "\ESC[C" -> return state{cursor = updateCursor 'l' (cursor state) lineSizes isInsertMode}
+    "\ESC[D" -> return state{cursor = updateCursor 'h' (cursor state) lineSizes isInsertMode}
+    _ -> case mode state of
+      Normal -> handleNormalMode state key
+      Insert -> handleInsertMode state key
+      Command -> handleCommandMode state key
