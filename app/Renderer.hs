@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+
 module Renderer where
 
 import Editor.Cursor
@@ -25,41 +27,38 @@ renderViewport extendedPieceTable' _ viewport _ = do
   printLines lines' viewport 0
 
 renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> IO ()
-renderStatusBar mode viewport cursor filename sBarMode errorMsg = do
+renderStatusBar mode' viewport cursor' filename' sBarMode errorMsg = do
   moveCursor (Cursor 0 (rows viewport))
   case sBarMode of
     NoException -> do
-      putStr ((showMode mode) ++ " | ")
-      putStr ("Path: " ++ filename ++ " | ")
-    otherwise -> do
-      putStr (errorMsg)
-  putStr (show ((x cursor) + 1) ++ ", " ++ (show ((y cursor) + 1)) ++ " |")
-  putStr (" " ++ (getLineProgress viewport cursor))
+      putStr $ showMode mode' ++ " | "
+      putStr $ "Path: " ++ filename' ++ " | "
+    _ -> do
+      putStr errorMsg
+  putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " |"
+  putStr $ " " ++ getLineProgress viewport cursor'
 
 showMode :: Mode -> String
-showMode mode =
-  case mode of
+showMode mode' =
+  case mode' of
     Normal -> "Normal"
     Insert -> "Insert"
     Command -> "Command"
 
 getLineProgress :: Viewport -> Cursor -> String
-getLineProgress viewport cursor =
-  let coverPercentage = ((x cursor) `div` (rows viewport)) * 100
-      progress =
-        if (coverPercentage == 100)
-          then "Bot"
-          else
-            if (coverPercentage == 0)
-              then "Top"
-              else (show coverPercentage) ++ "%"
+getLineProgress viewport cursor' =
+  let coverPercentage = x cursor' `div` rows viewport * 100
+      progress
+        | (coverPercentage == 100) = "Bot"
+        | (coverPercentage == 0) = "Top"
+        | otherwise = show coverPercentage ++ "%"
    in progress
 
 -- Renders the cursor in the terminal based on its position and style.
 -- @param mode :: Mode -
 renderCursor :: Mode -> Cursor -> IO ()
-renderCursor curMode (Cursor x y) = do
-  setCursorPosition x y
+renderCursor curMode (Cursor x' y') = do
+  setCursorPosition x' y'
   case curMode of
     Normal -> putStr "\ESC[1 q"
     Insert -> putStr "\ESC[5 q"
@@ -67,19 +66,19 @@ renderCursor curMode (Cursor x y) = do
   hFlush stdout
 
 printLines :: [String] -> Viewport -> Int -> IO ()
-printLines lines (Viewport columns rows initialRow initialColumn) row = do
+printLines lines' (Viewport columns' rows' initialRow' initialColumn') row = do
   hideCursor
-  let viewport = (Viewport columns rows initialRow initialColumn)
-  if row == (rows - 1)
+  let viewport = Viewport columns' rows' initialRow' initialColumn'
+  if row == (rows' - 1)
     then
       putStr ""
     else do
-      if lines == []
+      if null lines'
         then do
           putStrLn "~"
-          printLines lines viewport (row + 1)
+          printLines lines' viewport (row + 1)
         else do
           moveCursor (Cursor 0 row)
-          putStrLn (head lines)
-          printLines (tail lines) viewport (row + 1)
+          putStrLn (head lines')
+          printLines (tail lines') viewport (row + 1)
   showCursor

@@ -59,7 +59,13 @@ writeToFile state fname = do
   let tempFile = "." ++ fname ++ ".swp"
   writeFile tempFile (extendedPieceTableToString (extendedPieceTable state))
   renameFile tempFile fname
-  return state{mode = Normal, statusBar = clearError (statusBar state), fileStatus = Saved}
+  return
+    state
+      { mode = Normal
+      , statusBar = clearError (statusBar state)
+      , filename = if null (filename state) then fname else filename state
+      , fileStatus = Saved
+      }
 
 quitEditor :: EditorState -> IO EditorState
 quitEditor state =
