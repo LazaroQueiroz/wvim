@@ -30,6 +30,36 @@
   (major1) == 4 && (major2) <  17 || \
   (major1) == 4 && (major2) == 17 && (minor) <= 2)
 #endif /* MIN_VERSION_base */
+/* package directory-1.3.7.1 */
+#ifndef VERSION_directory
+#define VERSION_directory "1.3.7.1"
+#endif /* VERSION_directory */
+#ifndef MIN_VERSION_directory
+#define MIN_VERSION_directory(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  3 || \
+  (major1) == 1 && (major2) == 3 && (minor) <= 7)
+#endif /* MIN_VERSION_directory */
+/* package filemanip-0.3.6.3 */
+#ifndef VERSION_filemanip
+#define VERSION_filemanip "0.3.6.3"
+#endif /* VERSION_filemanip */
+#ifndef MIN_VERSION_filemanip
+#define MIN_VERSION_filemanip(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  3 || \
+  (major1) == 0 && (major2) == 3 && (minor) <= 6)
+#endif /* MIN_VERSION_filemanip */
+/* package unix-2.7.3 */
+#ifndef VERSION_unix
+#define VERSION_unix "2.7.3"
+#endif /* VERSION_unix */
+#ifndef MIN_VERSION_unix
+#define MIN_VERSION_unix(major1,major2,minor) (\
+  (major1) <  2 || \
+  (major1) == 2 && (major2) <  7 || \
+  (major1) == 2 && (major2) == 7 && (minor) <= 3)
+#endif /* MIN_VERSION_unix */
 
 /* tool gcc-13 */
 #ifndef TOOL_VERSION_gcc
