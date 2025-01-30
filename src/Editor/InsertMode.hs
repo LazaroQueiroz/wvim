@@ -1,52 +1,38 @@
 module Editor.InsertMode where
 
-import System.IO
-import System.Console.ANSI
-
-import Editor.Cursor
+import Editor.Cursor (Cursor (Cursor), updateCursorPosition)
 import Editor.EditorState
 import Editor.ExtendedPieceTable
-
+  ( deleteText,
+    insertText,
+    updateLinesSizes,
+  )
 import Utils
 
 handleInsertMode :: EditorState -> [Char] -> IO EditorState
 handleInsertMode currentState "\ESC" = do
   let newMode = Normal
-      extPieceTable = (extendedPieceTable currentState)
-      (Cursor x y) = (cursor currentState)
-      (_, _, _, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
-      -- insertStartIndex = (cursorXYToStringIndex (Cursor x y) linesSizes 0 0) - (length insertBuffer)
-      newExtendedPieceTable = (insertText extPieceTable)
-  return currentState { mode = newMode, extendedPieceTable = newExtendedPieceTable}
-
+      extPieceTable = extendedPieceTable currentState
+      newExtendedPieceTable = Editor.ExtendedPieceTable.insertText extPieceTable
+  return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable}
 handleInsertMode currentState "\DEL" = do
-  let extPieceTable = (extendedPieceTable currentState)
-      (Cursor x y) = (cursor currentState)
+  let extPieceTable = extendedPieceTable currentState
+      Editor.Cursor.Cursor cx cy = cursor currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
-      -- insertStartIndex = (cursorXYToStringIndex (Cursor x y) linesSizes 0 0) - (length insertBuffer)
-      newLinesSizes = (updateLinesSizes "\DEL" (cursor currentState) linesSizes)
-      newExtendedPieceTable = 
-        if (length insertBuffer) > 0 then 
-          let newInsertBuffer = (take ((length insertBuffer) - 1) insertBuffer)
-          in (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
-        else 
-          let (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = (deleteText (insertStartIndex) 1 extPieceTable)
-          in (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, newLinesSizes)
-  return currentState { extendedPieceTable = newExtendedPieceTable, cursor = (updateCursorPosition (cursor currentState) "\DEL" (nth x linesSizes)), fileStatus = NotSaved}
-
+      newLinesSizes = Editor.ExtendedPieceTable.updateLinesSizes "\DEL" (cursor currentState) linesSizes
+      newExtendedPieceTable
+        | not (null insertBuffer) =
+            let newInsertBuffer = take (length insertBuffer - 1) insertBuffer
+             in (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
+        | (cx == 0) && (cy == 0) = extPieceTable
+        | otherwise =
+            let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes') = Editor.ExtendedPieceTable.deleteText insertStartIndex 1 extPieceTable
+             in (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes')
+  return currentState {extendedPieceTable = newExtendedPieceTable, cursor = Editor.Cursor.updateCursorPosition (cursor currentState) "\DEL" (nth cx linesSizes), fileStatus = NotSaved}
 
 -- Caso de inserção normal de caracteres
-handleInsertMode currentState inputChar = do 
-  let (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = (extendedPieceTable currentState)
+handleInsertMode currentState inputChar = do
+  let (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable currentState
       newInsertBuffer = insertBuffer ++ inputChar
-      -- newStartPos = (cursorToPieceTablePos (Cursor x y) sizesSeq 0 0) - (length insertBuffer)
-      newLinesSizes = (updateLinesSizes inputChar (cursor currentState) linesSizes)
-  return currentState { extendedPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes), cursor = (updateCursorPosition (cursor currentState) inputChar 0), fileStatus = NotSaved}
-
--- -- Creates a function to transform a single string buffer into a 
--- -- array of strings, where each string represents a line in the grid
--- splitLines :: String -> [String]
--- splitLines buffer = 
---   let (line, rest) = break (== '\n') buffer
---   in line : if null rest then [] else splitLines (tail rest)
-
+      newLinesSizes = Editor.ExtendedPieceTable.updateLinesSizes inputChar (cursor currentState) linesSizes
+  return currentState {extendedPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes), cursor = Editor.Cursor.updateCursorPosition (cursor currentState) inputChar 0, fileStatus = NotSaved}

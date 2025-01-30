@@ -1,2 +1,2 @@
--- configurações 
+-- configurações
 
