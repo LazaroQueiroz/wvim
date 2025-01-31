@@ -20,7 +20,7 @@ type ExtendedPieceTable = ([Piece], Buffer, Buffer, Buffer, Int, [Int])
 -- Cria uma Piece Table vazia
 createExtendedPieceTable :: String -> ExtendedPieceTable
 createExtendedPieceTable originalText =
-  let linesSizes = getLinesSizes originalText 0 []
+  let linesSizes = getLinesSizes originalText
       firstPiece = [Piece Original 0 (length originalText)]
    in (firstPiece, originalText, "", "", 0, linesSizes)
 
@@ -40,17 +40,17 @@ deleteText startDeleteIndex length' (pieces, originalBuffer, addBuffer, insertBu
    in (newPiecesCollection, originalBuffer, addBuffer, insertBuffer, insertStartIndex - length', linesSizes)
 
 splitPieceCollection :: Int -> [Piece] -> ([Piece], [Piece])
-splitPieceCollection splitIndex =
+splitPieceCollection splitIndex = 
   go splitIndex []
- where
-  go 0 acc rest = (reverse acc, rest)
-  go n acc (currentPiece : remainingPieces)
-    | n < pieceLength currentPiece =
-        let (before, after) = splitPiece splitIndex currentPiece
-         in (reverse (before ++ acc), after ++ remainingPieces)
-    | otherwise =
-        go (splitIndex - pieceLength currentPiece) (currentPiece : acc) remainingPieces
-  go _ acc [] = (reverse acc, [])
+  where 
+    go _ acc [] = (reverse acc, [])
+    go 0 acc rest = (reverse acc, rest) 
+    go n acc (currentPiece : remainingPieces)
+      | n < pieceLength currentPiece =
+        let (before, after) = splitPiece n currentPiece
+          in (reverse (before ++ acc), after ++ remainingPieces)
+      | otherwise =
+        go (n - pieceLength currentPiece) (currentPiece : acc) remainingPieces
 
 splitPiece :: Int -> Piece -> ([Piece], [Piece])
 splitPiece splitIndex (Piece bufType pieceStartIndex len)
@@ -92,25 +92,27 @@ splitLines [] = []
 splitLines text =
   let (pre, suf) = break isLineTerminator text
    in pre : case suf of
-        ('\n' : rest) -> splitLines rest
-        ('\r' : rest) -> splitLines rest
+        ('\r' : '\n' : rest) -> splitLines rest
+        ('\n' : rest) -> splitLines rest         
+        ('\r' : rest) -> splitLines rest         
         _ -> []
 
 isLineTerminator :: Char -> Bool
 isLineTerminator char = (char == '\n') || (char == '\r')
 
-getLinesSizes :: String -> Int -> [Int] -> [Int]
-getLinesSizes "" lineSize acc = reverse (lineSize : acc)
-getLinesSizes text lineSize acc =
-  if head text == '\n'
-    then getLinesSizes (tail text) 0 (lineSize : acc)
-    else getLinesSizes (tail text) (lineSize + 1) acc
+getLinesSizes :: String -> [Int]
+getLinesSizes text = go text 0 []
+  where
+    go [] lineSize acc = lineSize : acc
+    go ('\n' : rest) lineSize acc = go rest 0 (lineSize : acc)
+    go (_ : rest) lineSize acc = go rest (lineSize + 1) acc
 
 cursorXYToStringIndex :: Cursor -> [Int] -> Int -> Int -> Int
-cursorXYToStringIndex (Cursor x' y') linesSizes acc lineIndex =
-  if lineIndex == x'
-    then acc + y'
-    else cursorXYToStringIndex (Cursor x' y') (tail linesSizes) (acc + head linesSizes) (lineIndex + 1)
+cursorXYToStringIndex (Cursor x' y') linesSizes acc lineIndex
+  | lineIndex == x' = acc + y' 
+  | otherwise = case linesSizes of
+      [] -> acc  
+      (h : t) -> cursorXYToStringIndex (Cursor x' y') t (acc + h) (lineIndex + 1)
 
 updateLinesSizes :: [Char] -> Cursor -> [Int] -> [Int]
 updateLinesSizes "\n" (Cursor x' y') linesSizes =
