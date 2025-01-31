@@ -9,7 +9,7 @@ data Viewport = Viewport
   deriving (Show, Eq)
 
 defaultViewport :: Int -> Int -> Viewport
-defaultViewport width height = Viewport height width 0 0
+defaultViewport rows' columns' = Viewport rows' columns' 0 0
 
 scrollUp :: Viewport -> Int -> Viewport
 scrollUp viewport multiplier = viewport{initialRow = initialRow viewport - multiplier}
