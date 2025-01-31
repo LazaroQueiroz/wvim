@@ -35,9 +35,10 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg = do
       putStr $ showMode mode' ++ " | "
       putStr $ "Path: " ++ filename' ++ " | "
     _ -> do
-      putStr errorMsg
+      putStr $ showMode mode' ++ " | "
+      putStr $ errorMsg ++ " | "
   putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " |"
-  putStr $ " " ++ getLineProgress viewport' cursor'
+  putStr $ " " ++ getLineProgress viewport' cursor' --TODO: Funcionar corretamente
 
 showMode :: Mode -> String
 showMode mode' =

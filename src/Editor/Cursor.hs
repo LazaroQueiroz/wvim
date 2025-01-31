@@ -9,27 +9,33 @@ data Cursor = Cursor {x :: Int, y :: Int} deriving (Show)
 
 -- Update cursor position based on input
 -- Pattern Matching: works like a switch case based on the inputs to the function.
-
+-- Guards: works like if, else if, else. Otherwise = True.
 updateCursor :: Char -> Cursor -> [Int] -> Bool -> Cursor
-updateCursor 'k' (Cursor x' y') lineSizes _ =
-  let newX = max 0 (x' - 1)
-      newY = min (nth (newX + 1) lineSizes) y'
-   in Cursor newX newY -- Move up
-updateCursor 'j' (Cursor x' y') lineSizes _ =
-  let newX = min (length lineSizes - 1) (x' + 1)
-      newY = min (nth (newX + 1) lineSizes) y'
-   in Cursor newX newY -- Move down
-updateCursor 'h' (Cursor x' y') _ _ =
-  let newX = x'
-      newY = max 0 (y' - 1)
-   in Cursor newX newY -- Move left
-updateCursor 'l' (Cursor x' y') lineSizes isInsertMode =
-  let maxRight = nth (x' + 1) lineSizes - 1
-      extra = if isInsertMode then 1 else 0 -- Permite ir um a mais se estiver no modo Insert
-      newX = x'
-      newY = min (maxRight + extra) (y' + 1)
-   in Cursor newX newY -- Move right
-updateCursor _ cursor _ _ = cursor -- No change
+updateCursor input (Cursor x' y') lineSizes isInsertMode
+  | input == 'k' = -- Move up
+      let newX = max 0 (x' - 1)
+          maxRight = nth (newX + 1) lineSizes - 1
+          extra = if isInsertMode then 1 else 0 -- Permite ir um a mais se estiver no modo Insert
+          newY = if maxRight == -1 then 0 else min (maxRight + extra) y'
+      in Cursor newX newY 
+  | input == 'j' = -- Move down
+      let newX = min (length lineSizes - 1) (x' + 1)
+          maxRight = nth (newX + 1) lineSizes - 1
+          extra = if isInsertMode then 1 else 0 -- Permite ir um a mais se estiver no modo Insert
+          newY = if maxRight == -1 then 0 else min (maxRight + extra) y'
+      in Cursor newX newY 
+  | input == 'h' = -- Move left
+      let newX = x'
+          newY = max 0 (y' - 1)
+      in Cursor newX newY 
+  | input == 'l' = -- Move right
+      let maxRight = nth (x' + 1) lineSizes - 1
+          extra = if isInsertMode then 1 else 0 -- Permite ir um a mais se estiver no modo Insert
+          newX = x'
+          newY = if maxRight == -1 then 0 else min (maxRight + extra) (y' + 1)
+      in Cursor newX newY 
+  | otherwise = -- No change
+      Cursor x' y'
 
 updateCursorPosition :: Cursor -> [Char] -> Int -> Cursor
 updateCursorPosition (Cursor x' y') "\DEL" aboveLineSize
