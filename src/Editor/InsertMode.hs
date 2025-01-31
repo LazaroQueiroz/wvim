@@ -10,6 +10,7 @@ import Editor.ExtendedPieceTable (
 import Utils
 
 handleInsertMode :: EditorState -> [Char] -> IO EditorState
+-- Caso de sair do modo
 handleInsertMode currentState "\ESC" = do
   let newMode = Normal
       extPieceTable = extendedPieceTable currentState
@@ -17,6 +18,7 @@ handleInsertMode currentState "\ESC" = do
       (_, _, _, _, _, linesSizes') = newExtendedPieceTable
       newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
   return currentState{mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
+-- Caso de deletar caracteres
 handleInsertMode currentState "\DEL" = do
   let extPieceTable = extendedPieceTable currentState
       Cursor x' _ = cursor currentState
@@ -30,8 +32,7 @@ handleInsertMode currentState "\DEL" = do
             let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', _) = deleteText insertStartIndex 1 extPieceTable
              in (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes)
   return currentState{extendedPieceTable = newExtendedPieceTable, cursor = updateCursorPosition (cursor currentState) "\DEL" (nth x' linesSizes), fileStatus = NotSaved}
-
--- Caso de inserção normal de caracteres
+-- Caso de inserir caracteres
 handleInsertMode currentState inputChar = do
   let (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable currentState
       newInsertBuffer = if inputChar == "\DEL" then "" else insertBuffer ++ inputChar

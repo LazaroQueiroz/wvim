@@ -20,18 +20,21 @@ type ExtendedPieceTable = ([Piece], Buffer, Buffer, Buffer, Int, [Int])
 -- Cria uma Piece Table vazia
 createExtendedPieceTable :: String -> ExtendedPieceTable
 createExtendedPieceTable originalText =
-  let linesSizes = getLinesSizes originalText
+  let linesSizes = getLinesSizes originalText 0 []
       firstPiece = [Piece Original 0 (length originalText)]
    in (firstPiece, originalText, "", "", 0, linesSizes)
 
 -- Insere texto na Piece Table
 insertText :: ExtendedPieceTable -> ExtendedPieceTable
-insertText (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) =
-  let newAddBuffer = addBuffer ++ insertBuffer
-      newPiece = Piece Add (length addBuffer) (length insertBuffer)
-      (before, after) = splitPieceCollection insertStartIndex pieces
-   in (before ++ [newPiece] ++ after, originalBuffer, newAddBuffer, "", insertStartIndex, linesSizes)
+insertText (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes)
+  | null insertBuffer = (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) 
+  | otherwise =
+      let newAddBuffer = addBuffer ++ insertBuffer
+          newPiece = Piece Add (length addBuffer) (length insertBuffer)
+          (before, after) = splitPieceCollection insertStartIndex pieces
+      in (before ++ [newPiece] ++ after, originalBuffer, newAddBuffer, "", insertStartIndex, linesSizes)
 
+-- Deleta texto na Piece Table
 deleteText :: Int -> Int -> ExtendedPieceTable -> ExtendedPieceTable
 deleteText startDeleteIndex length' (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) =
   let (piecesBeforeDeletion, piecesAfterDeletionStart) = splitPieceCollection startDeleteIndex pieces
@@ -100,12 +103,10 @@ splitLines text =
 isLineTerminator :: Char -> Bool
 isLineTerminator char = (char == '\n') || (char == '\r')
 
-getLinesSizes :: String -> [Int]
-getLinesSizes text = go text 0 []
-  where
-    go [] lineSize acc = lineSize : acc
-    go ('\n' : rest) lineSize acc = go rest 0 (lineSize : acc)
-    go (_ : rest) lineSize acc = go rest (lineSize + 1) acc
+getLinesSizes :: String -> Int -> [Int] -> [Int]
+getLinesSizes [] lineSize acc = reverse (lineSize : acc) 
+getLinesSizes ('\n' : t) lineSize acc = getLinesSizes t 0 (lineSize : acc) 
+getLinesSizes (_ : t) lineSize acc = getLinesSizes t (lineSize + 1) acc
 
 cursorXYToStringIndex :: Cursor -> [Int] -> Int -> Int -> Int
 cursorXYToStringIndex (Cursor x' y') linesSizes acc lineIndex
