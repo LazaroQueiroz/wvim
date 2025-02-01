@@ -46,12 +46,12 @@ getBinDir, getLibDir, getDynLibDir, getDataDir, getLibexecDir, getSysconfDir :: 
 
 
 bindir, libdir, dynlibdir, datadir, libexecdir, sysconfdir :: FilePath
-bindir     = "/home/igor-raffael/.cabal/bin"
-libdir     = "/home/igor-raffael/.cabal/lib/x86_64-linux-ghc-9.4.8/haskell-0.1.0.0-inplace-haskell"
-dynlibdir  = "/home/igor-raffael/.cabal/lib/x86_64-linux-ghc-9.4.8"
-datadir    = "/home/igor-raffael/.cabal/share/x86_64-linux-ghc-9.4.8/haskell-0.1.0.0"
-libexecdir = "/home/igor-raffael/.cabal/libexec/x86_64-linux-ghc-9.4.8/haskell-0.1.0.0"
-sysconfdir = "/home/igor-raffael/.cabal/etc"
+bindir     = "/home/rafael/.cabal/bin"
+libdir     = "/home/rafael/.cabal/lib/x86_64-linux-ghc-9.4.8/haskell-0.1.0.0-inplace-haskell"
+dynlibdir  = "/home/rafael/.cabal/lib/x86_64-linux-ghc-9.4.8"
+datadir    = "/home/rafael/.cabal/share/x86_64-linux-ghc-9.4.8/haskell-0.1.0.0"
+libexecdir = "/home/rafael/.cabal/libexec/x86_64-linux-ghc-9.4.8/haskell-0.1.0.0"
+sysconfdir = "/home/rafael/.cabal/etc"
 
 getBinDir     = catchIO (getEnv "haskell_bindir")     (\_ -> return bindir)
 getLibDir     = catchIO (getEnv "haskell_libdir")     (\_ -> return libdir)
