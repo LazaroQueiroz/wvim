@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Renderer where
 
@@ -30,19 +31,19 @@ renderViewport extendedPieceTable' _ viewport' _ = do
 renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> ExtendedPieceTable -> IO ()
 renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg extendedPieceTable' = do
   moveCursor (Cursor 0 (rows viewport'))
-  --  case sBarMode of
+  putStr $ "| " ++ showMode mode' ++ " | "
+  --case sBarMode of
   --    NoException -> do
-  --      putStr $ showMode mode' ++ " | "
   --      putStr $ "Path: " ++ filename' ++ " | "
-  --    _ -> do
-  --      putStr $ showMode mode' ++ " | "
+  --    Exception -> do
   --      putStr $ errorMsg ++ " | "
-  putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " |"
-  putStr $ " " ++ show (rows viewport') ++ "x" ++ show (columns viewport')
-  -- putStr $ getLineProgress extendedPieceTable' cursor'
+  --putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
+  --putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
+  --putStr $ getLineProgress extendedPieceTable' cursor' ++ " | "
   let (pieces, addBuffer, _, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable'
-  putStr $ " | " ++ "sizes:" ++ show linesSizes ++ " | aBuf:" ++ show addBuffer ++ " | iBuf:" ++ insertBuffer
-  putStr $ " | stidx:" ++ show insertStartIndex ++ " | " ++ show (piecesCollToString pieces)
+  putStr $ "sizes:" ++ show linesSizes ++ " | aBuf:" ++ show addBuffer ++ " | iBuf:" ++ insertBuffer ++ " | "
+  putStr $ "stidx:" ++ show insertStartIndex ++ " | " ++ show (piecesCollToString pieces) ++ " | "
+  -- TODO: case commandModeText
 
 showMode :: Mode -> String
 showMode mode' =
@@ -68,19 +69,24 @@ renderCursor curMode (Cursor x' y') = do
   hFlush stdout
 
 printLines :: [String] -> Viewport -> Int -> IO ()
-printLines lines' (Viewport rows' columns' initialRow' initialColumn') row = do
-  hideCursor
-  let viewport' = Viewport rows' columns' initialRow' initialColumn'
-  if row == (rows' - 1)
-    then
+printLines lines' (Viewport rows' columns' initialRow' initialColumn') row
+  | row == (rows' - 1) 
+    = 
+      --hideCursor
       putStr ""
-    else do
-      if null lines'
-        then do
-          putStrLn "~"
-          printLines lines' viewport' (row + 1)
-        else do
-          moveCursor (Cursor 0 row)
-          putStrLn (head lines')
-          printLines (tail lines') viewport' (row + 1)
-  showCursor
+      --showCursor
+  | null lines'
+    = do
+      --hideCursor
+      putStrLn "~"
+      printLines lines' viewport' (row + 1)
+      --showCursor
+  | otherwise 
+    = do
+      --hideCursor
+      moveCursor (Cursor 0 row)
+      putStrLn (head lines')
+      printLines (tail lines') viewport' (row + 1)
+      --showCursor
+  where
+    viewport' = Viewport rows' columns' initialRow' initialColumn'

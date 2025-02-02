@@ -9,34 +9,50 @@ import Editor.ExtendedPieceTable (
  )
 import Utils
 
+-- Handles user input in Insert mode, updating the editor state accordingly.
 handleInsertMode :: EditorState -> [Char] -> IO EditorState
--- Caso de sair do modo
-handleInsertMode currentState "\ESC" = do
+handleInsertMode currentState inputChar
+  | inputChar == "\ESC" = handleEscape currentState  -- Switches to Normal mode
+  | inputChar == "\DEL" && x' == 0 && y' == 0 = return currentState -- Don't delete character 
+  | inputChar == "\DEL" = handleDelete currentState -- Delete character
+  | otherwise = handleInsert currentState inputChar -- Inserts character
+  where
+    Cursor x' y' = cursor currentState
+  
+-- Handles exiting Insert mode
+handleEscape :: EditorState -> IO EditorState
+handleEscape currentState = do
   let newMode = Normal
       extPieceTable = extendedPieceTable currentState
       newExtendedPieceTable = insertText extPieceTable
       (_, _, _, _, _, linesSizes') = newExtendedPieceTable
       newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
-  return currentState{mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
--- Caso de deletar caracteres
-handleInsertMode currentState "\DEL"
-  | x' == 0 && y' == 0 = return currentState 
-  | otherwise = do
-      let extPieceTable = extendedPieceTable currentState
-          (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
-          newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) linesSizes
-          newExtendedPieceTable
-            | not (null insertBuffer) =
-                let newInsertBuffer = take (length insertBuffer - 1) insertBuffer
-                 in (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
-            | otherwise =
-                let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', _) = deleteText insertStartIndex 1 extPieceTable
-                 in (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes)
-      return currentState{extendedPieceTable = newExtendedPieceTable, cursor = updateCursorPosition (cursor currentState) "\DEL" (nth x' linesSizes), fileStatus = NotSaved}
-  where Cursor x' y' = cursor currentState
--- Caso de inserir caracteres
-handleInsertMode currentState inputChar = do
-  let (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable currentState
-      newInsertBuffer = if inputChar == "\DEL" then "" else insertBuffer ++ inputChar
+   in return currentState { mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor }
+
+-- Handles character insertion
+handleInsert :: EditorState -> [Char] -> IO EditorState
+handleInsert currentState inputChar = do
+  let extPieceTable = extendedPieceTable currentState
+      (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
+      newInsertBuffer = insertBuffer ++ inputChar
       newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
-  return currentState{extendedPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes), cursor = updateCursorPosition (cursor currentState) inputChar 0, fileStatus = NotSaved}
+      newCursor = updateCursorPosition (cursor currentState) inputChar 0
+      newExtendedPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
+   in return currentState { extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved }
+
+-- Handles character deletion
+handleDelete :: EditorState -> IO EditorState 
+handleDelete currentState = do
+  let extPieceTable = extendedPieceTable currentState
+      (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
+      newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) linesSizes
+      Cursor x' _ = cursor currentState
+      newCursor = updateCursorPosition (cursor currentState) "\DEL" (nth x' linesSizes)
+      newExtendedPieceTable
+        | not (null insertBuffer) =
+            let newInsertBuffer = take (length insertBuffer - 1) insertBuffer
+             in (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
+        | otherwise =
+            let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', _) = deleteText insertStartIndex 1 extPieceTable
+             in (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes)
+   in return currentState { extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved }
