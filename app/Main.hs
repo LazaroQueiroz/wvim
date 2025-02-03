@@ -14,7 +14,7 @@ import System.IO
 getCharRaw :: IO String
 getCharRaw = do
   char <- getChar  
-  threadDelay 1000  
+  threadDelay 2000 --TODO: Botar a condição do "\ESC" de volta pq se vc esmagar todas as teclas do teclado rapidamente ele vai inserir letras demais
   isCharInHandleBuffer <- hReady stdin  
   if isCharInHandleBuffer
     then getChars [char]  

@@ -13,9 +13,13 @@ import System.IO ()
 -- Handles user input in Normal mode, updating the editor state accordingly and switching to Insert mode or Command mode.
 handleNormalMode :: EditorState -> [Char] -> IO EditorState
 handleNormalMode currentState inputChar
-  | inputChar `elem` ["i", "I"] = switchToInsertMode currentState False --TODO: Include special character "Insert"
+  | inputChar `elem` ["i", "I","\ESC[2~"] = switchToInsertMode currentState False
   | inputChar `elem` ["a", "A"] = switchToInsertMode currentState True
-  | inputChar == ":" = switchToCommandMode currentState
+  | inputChar `elem` ["r","R"] = return currentState  --TODO: Switch to Replace Mode
+  | inputChar `elem` ["u","U"] = return currentState  --TODO: UNDO
+  | inputChar == "\DC2" = return currentState         --TODO: REDO
+  | inputChar == "\DEL" = return (updateEditorStateCursor currentState "h")
+  | inputChar == ":" = return currentState { mode = Command } -- Switch to Command mode.
   | otherwise = return (updateEditorStateCursor currentState inputChar)
 
 -- Switches to Insert mode ("i" or "I"), optionally moving the cursor forward ("a" or "A").
@@ -29,7 +33,3 @@ switchToInsertMode currentState moveCursor = do
       newInsertStartIndex = cursorXYToStringIndex newCursor linesSizes 0 0
       newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, linesSizes)
    in return currentState { mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor }
-
--- Switches to Command mode (":").
-switchToCommandMode :: EditorState -> IO EditorState
-switchToCommandMode currentState = return currentState { mode = Command }
