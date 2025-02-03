@@ -32,13 +32,13 @@ createExtendedPieceTable originalText =
 
 -- Inserts text into the Piece Table by adding new pieces based on the input buffer.
 insertText :: ExtendedPieceTable -> ExtendedPieceTable
-insertText (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes)
-  | null insertBuffer = (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes)
-  | otherwise =
-      let newAddBuffer = addBuffer ++ insertBuffer
-          newPiece = Piece Add (length addBuffer) (length insertBuffer)
-          (before, after) = splitPieceCollection insertStartIndex pieces
-       in (before ++ [newPiece] ++ after, originalBuffer, newAddBuffer, "", insertStartIndex, linesSizes)
+insertText (pieces, originalBuffer, addBuffer, "", insertStartIndex, linesSizes) = 
+  (pieces, originalBuffer, addBuffer, "", insertStartIndex, linesSizes)
+insertText (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) =
+  let newAddBuffer = addBuffer ++ insertBuffer
+      newPiece = Piece Add (length addBuffer) (length insertBuffer)
+      (before, after) = splitPieceCollection insertStartIndex pieces
+   in (before ++ [newPiece] ++ after, originalBuffer, newAddBuffer, "", insertStartIndex, linesSizes)
 
 -- Deletes text in Piece Table by removing the corresponding range of pieces 
 deleteText :: Int -> Int -> ExtendedPieceTable -> ExtendedPieceTable
@@ -91,10 +91,8 @@ extendedPieceTableToString (pieces, originalBuffer, addBuffer, insertBuffer, ins
     )
     ""
     pieces
-
--- Checks if a number is inside a closed interval [lowerBound, upperBound]. (The interval is a piece)
-isInsidePieceInterval :: Int -> Int -> Int -> Bool
-isInsidePieceInterval = isInsideClosedInterval
+    where 
+      isInsidePieceInterval = isInsideClosedInterval
 
 -- Converts the extended piece table into a list of strings, representing lines of text.
 extendedPieceTableToLineArray :: ExtendedPieceTable -> [String]
@@ -102,11 +100,10 @@ extendedPieceTableToLineArray extendedPieceTable = splitLines (extendedPieceTabl
 
 -- Converts a Cursor's position (x, y) to the corresponding string index in the buffer
 cursorXYToStringIndex :: Cursor -> [Int] -> Int -> Int -> Int
-cursorXYToStringIndex (Cursor x' y') linesSizes acc lineIndex
+cursorXYToStringIndex (Cursor _ _) [] acc _ = acc
+cursorXYToStringIndex (Cursor x' y') (h:t) acc lineIndex
   | lineIndex == x' = acc + y' + x'
-  | otherwise = case linesSizes of
-      [] -> acc
-      (h : t) -> cursorXYToStringIndex (Cursor x' y') t (acc + h) (lineIndex + 1)
+  | otherwise = cursorXYToStringIndex (Cursor x' y') t (acc + h) (lineIndex + 1)
 
 -- Splits a string into a list of lines, spliting them with line breaks '\r\n' and '\n'.
 splitLines :: String -> [String]
