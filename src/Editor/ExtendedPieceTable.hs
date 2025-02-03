@@ -23,14 +23,14 @@ pieceToString piece = "buf:" ++ show (head (show (bufferType piece))) ++ "|idx:"
 
 type ExtendedPieceTable = ([Piece], Buffer, Buffer, Buffer, Int, [Int])
 
--- Cria uma Piece Table vazia
+-- Creates an empty Piece Table with an initial piece containing the original text.
 createExtendedPieceTable :: String -> ExtendedPieceTable
 createExtendedPieceTable originalText =
   let linesSizes = getLinesSizes originalText 0 []
       firstPiece = [Piece Original 0 (length originalText)]
    in (firstPiece, originalText, "", "", 0, linesSizes)
 
--- Insere texto na Piece Table
+-- Inserts text into the Piece Table by adding new pieces based on the input buffer.
 insertText :: ExtendedPieceTable -> ExtendedPieceTable
 insertText (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes)
   | null insertBuffer = (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes)
@@ -40,7 +40,7 @@ insertText (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, l
           (before, after) = splitPieceCollection insertStartIndex pieces
        in (before ++ [newPiece] ++ after, originalBuffer, newAddBuffer, "", insertStartIndex, linesSizes)
 
--- Deleta texto na Piece Table
+-- Deletes text in Piece Table by removing the corresponding range of pieces 
 deleteText :: Int -> Int -> ExtendedPieceTable -> ExtendedPieceTable
 deleteText startDeleteIndex length' (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) =
   let (piecesBeforeDeletion, piecesAfterDeletionStart) = splitPieceCollection (startDeleteIndex - 1) pieces
@@ -48,9 +48,9 @@ deleteText startDeleteIndex length' (pieces, originalBuffer, addBuffer, insertBu
       newPiecesCollection = piecesBeforeDeletion ++ piecesAfterDeletion
    in (newPiecesCollection, originalBuffer, addBuffer, insertBuffer, insertStartIndex - length', linesSizes)
 
+-- Splits the Piece Collection at the specified index, returning two parts: one before the index and one after the index.
 splitPieceCollection :: Int -> [Piece] -> ([Piece], [Piece])
-splitPieceCollection splitIndex =
-  go splitIndex []
+splitPieceCollection splitIndex = go splitIndex []
  where
   go _ acc [] = (reverse acc, [])
   go 0 acc rest = (reverse acc, rest)
@@ -61,6 +61,7 @@ splitPieceCollection splitIndex =
     | otherwise =
         go (n - pieceLength currentPiece) (currentPiece : acc) remainingPieces
 
+-- Splits a single Piece at the specified index, returning two new pieces: one before the index and one after the index.
 splitPiece :: Int -> Piece -> ([Piece], [Piece])
 splitPiece splitIndex (Piece bufType pieceStartIndex len)
   | splitIndex <= 0 = ([], [Piece bufType pieceStartIndex len])
@@ -70,6 +71,7 @@ splitPiece splitIndex (Piece bufType pieceStartIndex len)
       , [Piece bufType (pieceStartIndex + splitIndex) (len - splitIndex)]
       )
 
+-- Idk
 extendedPieceTableToString :: ExtendedPieceTable -> String
 extendedPieceTableToString (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, _) =
   foldl
@@ -90,12 +92,23 @@ extendedPieceTableToString (pieces, originalBuffer, addBuffer, insertBuffer, ins
     ""
     pieces
 
+-- Checks if a number is inside a closed interval [lowerBound, upperBound]. (The interval is a piece)
 isInsidePieceInterval :: Int -> Int -> Int -> Bool
 isInsidePieceInterval = isInsideClosedInterval
 
+-- Converts the extended piece table into a list of strings, representing lines of text.
 extendedPieceTableToLineArray :: ExtendedPieceTable -> [String]
 extendedPieceTableToLineArray extendedPieceTable = splitLines (extendedPieceTableToString extendedPieceTable)
 
+-- Converts a Cursor's position (x, y) to the corresponding string index in the buffer
+cursorXYToStringIndex :: Cursor -> [Int] -> Int -> Int -> Int
+cursorXYToStringIndex (Cursor x' y') linesSizes acc lineIndex
+  | lineIndex == x' = acc + y' + x'
+  | otherwise = case linesSizes of
+      [] -> acc
+      (h : t) -> cursorXYToStringIndex (Cursor x' y') t (acc + h) (lineIndex + 1)
+
+-- Splits a string into a list of lines, spliting them with line breaks '\r\n' and '\n'.
 splitLines :: String -> [String]
 splitLines [] = []
 splitLines text =
@@ -105,18 +118,13 @@ splitLines text =
         (_ : rest) -> splitLines rest
         _ -> []
 
+-- Computes the sizes (lengths) of each line in a string, returning a list of integers.
 getLinesSizes :: String -> Int -> [Int] -> [Int]
 getLinesSizes [] lineSize acc = reverse (lineSize : acc)
 getLinesSizes ('\n' : t) lineSize acc = getLinesSizes t 0 (lineSize : acc)
 getLinesSizes (_ : t) lineSize acc = getLinesSizes t (lineSize + 1) acc
 
-cursorXYToStringIndex :: Cursor -> [Int] -> Int -> Int -> Int
-cursorXYToStringIndex (Cursor x' y') linesSizes acc lineIndex
-  | lineIndex == x' = acc + y' + x'
-  | otherwise = case linesSizes of
-      [] -> acc
-      (h : t) -> cursorXYToStringIndex (Cursor x' y') t (acc + h) (lineIndex + 1)
-
+-- Updates the line sizes based on the user input, returning the new line sizes.
 updateLinesSizes :: [Char] -> Cursor -> [Int] -> [Int]
 updateLinesSizes inputChar (Cursor x' y') linesSizes
   | inputChar == "\n" = beforeCursor ++ [y', cursorLineSize - y'] ++ afterCursor 

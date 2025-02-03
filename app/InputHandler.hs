@@ -9,6 +9,7 @@ import Editor.ExtendedPieceTable
 import Editor.InsertMode
 import Editor.NormalMode
 
+-- Handles key press events and updates the EditorState accordingly based on the mode (Insert, Normal, or Command).
 handleKeyPress :: EditorState -> [Char] -> IO EditorState
 handleKeyPress state inputChar
     | inputChar `elem` ["\ESC[A", "\ESC[B", "\ESC[C", "\ESC[D"] =
@@ -28,8 +29,10 @@ handleKeyPress state inputChar
             let (_, _, _, _, _, lineSizes) = extendedPieceTable state
                 newCursor = updateCursor direction (cursor state) lineSizes False
             in return state {cursor = newCursor}
-          Command -> return state
-    | otherwise = case mode state of
-      Normal -> handleNormalMode state inputChar
-      Insert -> handleInsertMode state inputChar
-      Command -> handleCommandMode state inputChar
+          Command -> return state --TODO: Movement on commandText
+    | otherwise 
+      = 
+        case mode state of
+          Normal -> handleNormalMode state inputChar
+          Insert -> handleInsertMode state inputChar
+          Command -> handleCommandMode state inputChar

@@ -19,7 +19,7 @@ getCharRaw = do
       threadDelay 5000
       isCharInHandleBuffer <- hReady stdin
       if isCharInHandleBuffer
-        then do
+        then do --TODO: Special characters support
           secondChar <- getChar
           if secondChar == '['
             then do
@@ -64,7 +64,7 @@ eventLoop = unfoldM step
  where
   step editorState = do
     renderState editorState
-    inputString <- if mode editorState == Command then getLine else getCharRaw
+    inputString <- getCharRaw
     newState <- handleKeyPress editorState inputString
     return $ if isRunning newState then Just newState else Nothing
 
@@ -76,7 +76,7 @@ unfoldM f a = do
 -- Verifies if the current editor state is a valid (or running) state. If this is the case, return True, otherwise, False.
 -- @param editorState :: EditorState - current state of the editor.
 isRunning :: EditorState -> Bool
-isRunning (EditorState mode' _ _ _ _ _ _) =
+isRunning (EditorState mode' _ _ _ _ _ _ _) =
   case mode' of
     Closed -> False
     _ -> True
