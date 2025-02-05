@@ -13,12 +13,15 @@ import System.IO
 -- @return String that represents the character (composite or individual) received from the user.
 getCharRaw :: IO String
 getCharRaw = do
-  char <- getChar  
-  threadDelay 2000 --TODO: Botar a condição do "\ESC" de volta pq se vc esmagar todas as teclas do teclado rapidamente ele vai inserir letras demais
-  isCharInHandleBuffer <- hReady stdin  
-  if isCharInHandleBuffer
-    then getChars [char]  
-    else return [char]  
+  char <- getChar
+  if char == '\ESC'
+    then do
+      threadDelay 2000  -- Pequeno atraso para evitar leituras excessivas
+      isCharInHandleBuffer <- hReady stdin  
+      if isCharInHandleBuffer
+        then getChars [char]  -- Captura sequência completa
+        else return [char]
+    else return [char]
 
 -- Função auxiliar que captura uma sequência de caracteres
 getChars :: [Char] -> IO String
