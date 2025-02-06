@@ -2,12 +2,11 @@
 
 module InputHandler where
 
-import Editor.CommandMode (handleCommandMode)
+
 import Editor.Cursor
 import Editor.EditorState
 import Editor.ExtendedPieceTable
-import Editor.InsertMode
-import Editor.NormalMode
+import Editor.ModeManager
 
 -- Handles key press events and updates the EditorState accordingly based on the mode (Insert, Normal, or Command).
 handleKeyPress :: EditorState -> [Char] -> IO EditorState
@@ -20,14 +19,7 @@ handleKeyPress state inputChar
               "\ESC[C" -> 'l'
               "\ESC[D" -> 'h'
          in handleMovement state direction 
-    | not special || inputChar `elem` ["\ESC", "\ESC[2~", "\ESC[3~", "\n","\DC2"] 
-      = do
-        case mode state of
-          Normal -> handleNormalMode state inputChar
-          Visual -> handleNormalMode state inputChar --Em breve terá a propria classe
-          Insert -> handleInsertMode state inputChar
-          Replace -> handleInsertMode state inputChar --Em breve terá a propria classe
-          Command -> handleCommandMode state inputChar
+    | not special || inputChar `elem` ["\ESC", "\ESC[2~", "\ESC[3~", "\n","\DC2"] = handleMode state inputChar
     | otherwise = return state
     where
       special = 

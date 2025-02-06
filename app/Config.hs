@@ -1,2 +1,2 @@
---module Config where
+module Config where
 

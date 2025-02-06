@@ -49,14 +49,14 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
     Insert -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
       putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
-      putStr $ "iBuf:" ++ insertBuffer ++ " | "
+      --putStr $ "iBuf:" ++ insertBuffer ++ " | "
       --putStr $ "oBuf:" ++ show originalBuffer ++ " | " 
       --putStr $ "aBuf:" ++ show addBuffer ++ " | "
       --putStr $ show (piecesCollToString pieces)
     Replace -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
       putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
-      putStr $ "iBuf:" ++ insertBuffer ++ " | "
+      --putStr $ "iBuf:" ++ insertBuffer ++ " | "
       --putStr $ "oBuf:" ++ show originalBuffer ++ " | " 
       --putStr $ "aBuf:" ++ show addBuffer ++ " | "
       --putStr $ show (piecesCollToString pieces)

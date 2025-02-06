@@ -80,17 +80,17 @@ executable haskell
     -- Base language which the package is written in.
     default-language: Haskell2010
 
-    other-modules: Editor.CommandMode
-                   Editor.Cursor
+    other-modules: Editor.Cursor
                    Editor.EditorState
                    Editor.FileManager
-                   Editor.InsertMode
-                   Editor.NormalMode
+                   Editor.ModeManager
                    Editor.ExtendedPieceTable
                    Editor.StatusBar
                    Editor.Viewport
                    InputHandler
                    Renderer
+                   Events
+                   Config
                    Terminal.Colors
                    Terminal.Keyboard
                    Terminal.Render
