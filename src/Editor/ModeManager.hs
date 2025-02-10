@@ -38,11 +38,14 @@ handleReplaceMode :: EditorState -> [Char] -> IO EditorState
 handleReplaceMode currentState inputChar
   | inputChar == "\ESC" = switchToNormalMode currentState           -- Switch to Normal mode
   | inputChar == "\ESC[2~" = switchToInsertMode currentState False  -- Switch to Replace Mode
-  | inputChar == "\DEL" = handleBackspace                           -- Deveria deletar o insertBuffer, mas era algo problematico demais então eu decidi não fazer por enquanto
+  | inputChar == "\n" = handleInsert currentState inputChar         -- Just do it
+  | inputChar == "\DEL" = handleBackspace
   | otherwise = handleReplace currentState inputChar
   where
-    handleBackspace = 
-      let (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = insertText (extendedPieceTable currentState)
+    (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = extendedPieceTable currentState
+    handleBackspace
+      | not (null insertBuffer) = handleDelete currentState
+      | otherwise = let 
           newCursor = updateCursor 'h' (cursor currentState) lineSizes True
           newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
           newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
@@ -116,7 +119,6 @@ handleDelete currentState = do
 
 -- Handles character replacement
 handleReplace :: EditorState -> [Char] -> IO EditorState
-handleReplace currentState "\n" = return currentState
 handleReplace currentState inputChar = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
