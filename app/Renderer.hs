@@ -83,3 +83,4 @@ printLines lines' (Viewport columns' rows' initialRow' initialColumn') row = do
           putStrLn (head lines')
           printLines (tail lines') viewport' (row + 1)
   showCursor
+
