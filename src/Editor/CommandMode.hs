@@ -1,16 +1,16 @@
 module Editor.CommandMode where
 
-import Editor.EditorState (
-  EditorState (
-    extendedPieceTable,
-    fileStatus,
-    filename,
-    mode,
-    statusBar
-  ),
-  FileStatus (NotSaved, Saved),
-  Mode (Normal),
- )
+import Editor.EditorState
+  ( EditorState
+      ( extendedPieceTable,
+        fileStatus,
+        filename,
+        mode,
+        statusBar
+      ),
+    FileStatus (NotSaved, Saved),
+    Mode (Normal),
+  )
 import Editor.ExtendedPieceTable
 import Editor.StatusBar
 import System.Directory (doesFileExist, getPermissions, renameFile, writable)
@@ -59,7 +59,13 @@ writeToFile state fname = do
   let tempFile = "." ++ fname ++ ".swp"
   writeFile tempFile (extendedPieceTableToString (extendedPieceTable state))
   renameFile tempFile fname
-  return state{mode = Normal, statusBar = clearError (statusBar state), fileStatus = Saved}
+  return
+    state
+      { mode = Normal,
+        statusBar = clearError (statusBar state),
+        filename = if null (filename state) then fname else filename state,
+        fileStatus = Saved
+      }
 
 quitEditor :: EditorState -> IO EditorState
 quitEditor state =
@@ -80,7 +86,7 @@ saveAndQuit state force args = do
 
 setError :: EditorState -> String -> EditorState
 setError state msg =
-  state{mode = Normal, statusBar = (statusBar state){statusMode = Exception, errorMessage = msg}}
+  state {mode = Normal, statusBar = (statusBar state) {statusMode = Exception, errorMessage = msg}}
 
 clearError :: StatusBar -> StatusBar
-clearError sBar = sBar{statusMode = NoException, errorMessage = ""}
+clearError sBar = sBar {statusMode = NoException, errorMessage = ""}

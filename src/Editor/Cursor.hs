@@ -13,7 +13,7 @@ data Cursor = Cursor {x :: Int, y :: Int} deriving (Show)
 updateCursor :: Char -> Cursor -> [Int] -> Cursor
 updateCursor 'k' (Cursor cx cy) lineSizes =
   let newX = max 0 (cx - 1)
-      newY = min (nth (newX + 1) lineSizes - 1) cy
+      newY = min (nth (newX + 1) lineSizes) cy
    in Cursor newX newY -- Move up
 updateCursor 'j' (Cursor cx cy) lineSizes =
   let newX = min (length lineSizes - 1) (cx + 1)

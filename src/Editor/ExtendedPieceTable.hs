@@ -33,11 +33,11 @@ insertText (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, l
    in (before ++ [newPiece] ++ after, originalBuffer, newAddBuffer, "", insertStartIndex, linesSizes)
 
 deleteText :: Int -> Int -> ExtendedPieceTable -> ExtendedPieceTable
-deleteText startDeleteIndex clength (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) =
+deleteText startDeleteIndex length' (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) =
   let (piecesBeforeDeletion, piecesAfterDeletionStart) = splitPieceCollection startDeleteIndex pieces
-      (_, piecesAfterDeletion) = splitPieceCollection clength piecesAfterDeletionStart
+      (_, piecesAfterDeletion) = splitPieceCollection length' piecesAfterDeletionStart
       newPiecesCollection = piecesBeforeDeletion ++ piecesAfterDeletion
-   in (newPiecesCollection, originalBuffer, addBuffer, insertBuffer, insertStartIndex - clength, linesSizes)
+   in (newPiecesCollection, originalBuffer, addBuffer, insertBuffer, insertStartIndex - length', linesSizes)
 
 splitPieceCollection :: Int -> [Piece] -> ([Piece], [Piece])
 splitPieceCollection splitIndex =
@@ -107,35 +107,35 @@ getLinesSizes text lineSize acc =
     else getLinesSizes (tail text) (lineSize + 1) acc
 
 cursorXYToStringIndex :: Cursor -> [Int] -> Int -> Int -> Int
-cursorXYToStringIndex (Cursor cx cy) linesSizes acc lineIndex =
-  if lineIndex == cx
-    then acc + cy
-    else cursorXYToStringIndex (Cursor cx cy) (tail linesSizes) (acc + head linesSizes + 1) (lineIndex + 1)
+cursorXYToStringIndex (Cursor x' y') linesSizes acc lineIndex =
+  if lineIndex == x'
+    then acc + y'
+    else cursorXYToStringIndex (Cursor x' y') (tail linesSizes) (acc + head linesSizes) (lineIndex + 1)
 
 updateLinesSizes :: [Char] -> Cursor -> [Int] -> [Int]
-updateLinesSizes "\n" (Cursor cx cy) linesSizes =
-  let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt cx linesSizes
+updateLinesSizes "\n" (Cursor x' y') linesSizes =
+  let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt x' linesSizes
       cursorLineSize = head linesSizesFromCursor
       linesSizesAfterCursor =
         if null linesSizesFromCursor then [] else tail linesSizesFromCursor
-      newLineSizeBeforeSplit = cy
-      newLineSizeAfterSplit = cursorLineSize - cy
+      newLineSizeBeforeSplit = y'
+      newLineSizeAfterSplit = cursorLineSize - y'
    in linesSizesBeforeCursor ++ [newLineSizeBeforeSplit] ++ [newLineSizeAfterSplit] ++ linesSizesAfterCursor
-updateLinesSizes "\DEL" (Cursor cx cy) linesSizes =
-  if (cx == 0) && (cy == 0)
+updateLinesSizes "\DEL" (Cursor x' y') linesSizes =
+  if (x' == 0) && (y' == 0)
     then linesSizes
     else
-      let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt cx linesSizes
+      let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt x' linesSizes
           cursorLineSize = head linesSizesFromCursor
           previousToCursorLineSize = last linesSizesBeforeCursor
           newLineSize = cursorLineSize + previousToCursorLineSize
           linesSizesBeforeLineJoin = init linesSizesBeforeCursor
           linesSizesAfterCursor = tail linesSizesFromCursor
-       in if cy == 0
+       in if y' == 0
             then linesSizesBeforeLineJoin ++ [newLineSize] ++ linesSizesAfterCursor
             else linesSizesBeforeCursor ++ [cursorLineSize - 1] ++ linesSizesAfterCursor
-updateLinesSizes _ (Cursor cx _) linesSizes =
-  let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt cx linesSizes
+updateLinesSizes _ (Cursor x' _) linesSizes =
+  let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt x' linesSizes
       cursorLineSize = head linesSizesFromCursor
       linesSizesAfterCursor =
         if null linesSizesFromCursor then [] else tail linesSizesFromCursor
