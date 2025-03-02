@@ -10,31 +10,33 @@ data Cursor = Cursor {x :: Int, y :: Int} deriving (Show)
 -- Update cursor position based on input
 -- Pattern Matching: works like a switch case based on the inputs to the function.
 
-updateCursor :: Char -> Cursor -> [Int] -> Cursor
-updateCursor 'k' (Cursor cx cy) lineSizes =
-  let newX = max 0 (cx - 1)
-      newY = min (nth (newX + 1) lineSizes) cy
+updateCursor :: Char -> Cursor -> [Int] -> Bool -> Cursor
+updateCursor 'k' (Cursor x' y') lineSizes _ =
+  let newX = max 0 (x' - 1)
+      newY = min (nth (newX + 1) lineSizes) y'
    in Cursor newX newY -- Move up
-updateCursor 'j' (Cursor cx cy) lineSizes =
-  let newX = min (length lineSizes - 1) (cx + 1)
-      newY = min (nth (newX + 1) lineSizes) cy
+updateCursor 'j' (Cursor x' y') lineSizes _ =
+  let newX = min (length lineSizes - 1) (x' + 1)
+      newY = min (nth (newX + 1) lineSizes) y'
    in Cursor newX newY -- Move down
-updateCursor 'h' (Cursor cx cy) _ =
-  let newX = cx
-      newY = max 0 (cy - 1)
+updateCursor 'h' (Cursor x' y') _ _ =
+  let newX = x'
+      newY = max 0 (y' - 1)
    in Cursor newX newY -- Move left
-updateCursor 'l' (Cursor cx cy) lineSizes =
-  let newX = cx
-      newY = min (nth (cx + 1) lineSizes) (cy + 1)
+updateCursor 'l' (Cursor x' y') lineSizes isInsertMode =
+  let maxRight = nth (x' + 1) lineSizes - 1
+      extra = if isInsertMode then 1 else 0 -- Permite ir um a mais se estiver no modo Insert
+      newX = x'
+      newY = min (maxRight + extra) (y' + 1)
    in Cursor newX newY -- Move right
-updateCursor _ cursor _ = cursor -- No change
+updateCursor _ cursor _ _ = cursor -- No change
 
 updateCursorPosition :: Cursor -> [Char] -> Int -> Cursor
-updateCursorPosition (Cursor cx cy) "\DEL" aboveLineSize
-  | cx == 0 = if cy == 0 then Cursor cx cy else Cursor cx (cy - 1)
-  | cy == 0 = Cursor (cx - 1) aboveLineSize
-  | otherwise = Cursor cx (cy - 1)
-updateCursorPosition (Cursor cx _) "\n" _ =
-  Cursor (cx + 1) 0
-updateCursorPosition (Cursor cx cy) _ _ =
-  Cursor cx (cy + 1)
+updateCursorPosition (Cursor x' y') "\DEL" aboveLineSize
+  | x' == 0 = if y' == 0 then Cursor x' y' else Cursor x' (y' - 1)
+  | y' == 0 = Cursor (x' - 1) aboveLineSize
+  | otherwise = Cursor x' (y' - 1)
+updateCursorPosition (Cursor x' _) "\n" _ =
+  Cursor (x' + 1) 0
+updateCursorPosition (Cursor x' y') _ _ =
+  Cursor x' (y' + 1)
