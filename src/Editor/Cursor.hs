@@ -14,14 +14,14 @@ updateCursor input (Cursor x' y') lineSizes isInsertMode
     =
       let newX = max 0 (x' - 1)
           maxRight = nth (newX + 1) lineSizes - 1
-          extra = if isInsertMode then 1 else 0 -- Permite ir um a mais se estiver no modo Insert
+          extra = if isInsertMode then 1 else 0
           newY = if maxRight == -1 then 0 else min (maxRight + extra) y'
        in Cursor newX newY
   | input == 'j' -- Move down
     =
       let newX = min (length lineSizes - 1) (x' + 1)
           maxRight = nth (newX + 1) lineSizes - 1
-          extra = if isInsertMode then 1 else 0 -- Permite ir um a mais se estiver no modo Insert
+          extra = if isInsertMode then 1 else 0
           newY = if maxRight == -1 then 0 else min (maxRight + extra) y'
        in Cursor newX newY
   | input == 'h' -- Move left
@@ -32,7 +32,7 @@ updateCursor input (Cursor x' y') lineSizes isInsertMode
   | input == 'l' -- Move right
     =
       let maxRight = nth (x' + 1) lineSizes - 1
-          extra = if isInsertMode then 1 else 0 -- Permite ir um a mais se estiver no modo Insert
+          extra = if isInsertMode then 1 else 0
           newX = x'
           newY = if maxRight == -1 then 0 else min (maxRight + extra) (y' + 1)
        in Cursor newX newY

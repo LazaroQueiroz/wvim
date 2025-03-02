@@ -20,10 +20,10 @@ data EditorState = EditorState
   }
 
 defaultEditorState :: Int -> Int -> String -> EditorState
-defaultEditorState width height filename' = EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport width height) Saved filename' (StatusBar NoException "")
+defaultEditorState rows' columns' filename' = EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "")
 
 editorStateFromFile :: String -> Int -> Int -> String -> EditorState
-editorStateFromFile file width height filename' = EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport width height) Saved filename' (StatusBar NoException "")
+editorStateFromFile file rows' columns' filename' = EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "")
 
 updateEditorStateCursor :: EditorState -> [Char] -> EditorState
 updateEditorStateCursor state direction

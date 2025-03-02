@@ -15,6 +15,12 @@ data Piece = Piece
   }
   deriving (Show)
 
+piecesCollToString :: [Piece] -> [String]
+piecesCollToString = map pieceToString
+
+pieceToString :: Piece -> String
+pieceToString piece = "buf:" ++ show (head (show (bufferType piece))) ++ "|idx:" ++ show (startIndex piece) ++ "|len:" ++ show (pieceLength piece)
+
 type ExtendedPieceTable = ([Piece], Buffer, Buffer, Buffer, Int, [Int])
 
 -- Cria uma Piece Table vazia
@@ -110,7 +116,7 @@ getLinesSizes (_ : t) lineSize acc = getLinesSizes t (lineSize + 1) acc
 
 cursorXYToStringIndex :: Cursor -> [Int] -> Int -> Int -> Int
 cursorXYToStringIndex (Cursor x' y') linesSizes acc lineIndex
-  | lineIndex == x' = acc + y'
+  | lineIndex == x' = acc + y' + x'
   | otherwise = case linesSizes of
       [] -> acc
       (h : t) -> cursorXYToStringIndex (Cursor x' y') t (acc + h) (lineIndex + 1)

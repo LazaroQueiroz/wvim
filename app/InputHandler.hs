@@ -1,4 +1,3 @@
--- TODO "Closed" fora do pattern matching
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module InputHandler where
