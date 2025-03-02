@@ -99,15 +99,11 @@ extendedPieceTableToLineArray extendedPieceTable = splitLines (extendedPieceTabl
 splitLines :: String -> [String]
 splitLines [] = []
 splitLines text =
-  let (pre, suf) = break isLineTerminator text
+  let (pre, suf) = break (`elem` "\r\n") text
    in pre : case suf of
         ('\r' : '\n' : rest) -> splitLines rest
-        ('\n' : rest) -> splitLines rest
-        ('\r' : rest) -> splitLines rest
+        (_ : rest) -> splitLines rest
         _ -> []
-
-isLineTerminator :: Char -> Bool
-isLineTerminator char = (char == '\n') || (char == '\r')
 
 getLinesSizes :: String -> Int -> [Int] -> [Int]
 getLinesSizes [] lineSize acc = reverse (lineSize : acc)
@@ -122,27 +118,44 @@ cursorXYToStringIndex (Cursor x' y') linesSizes acc lineIndex
       (h : t) -> cursorXYToStringIndex (Cursor x' y') t (acc + h) (lineIndex + 1)
 
 updateLinesSizes :: [Char] -> Cursor -> [Int] -> [Int]
-updateLinesSizes "\n" (Cursor x' y') linesSizes =
-  let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt x' linesSizes
-      cursorLineSize = head linesSizesFromCursor
-      linesSizesAfterCursor =
-        if null linesSizesFromCursor then [] else tail linesSizesFromCursor
-      newLineSizeBeforeSplit = y'
-      newLineSizeAfterSplit = cursorLineSize - y'
-   in linesSizesBeforeCursor ++ [newLineSizeBeforeSplit] ++ [newLineSizeAfterSplit] ++ linesSizesAfterCursor
-updateLinesSizes "\DEL" (Cursor x' y') linesSizes =
-  let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt x' linesSizes
-      cursorLineSize = head linesSizesFromCursor
-      previousToCursorLineSize = last linesSizesBeforeCursor
-      newLineSize = cursorLineSize + previousToCursorLineSize
-      linesSizesBeforeLineJoin = init linesSizesBeforeCursor
-      linesSizesAfterCursor = tail linesSizesFromCursor
-   in if y' == 0
-        then linesSizesBeforeLineJoin ++ [newLineSize] ++ linesSizesAfterCursor
-        else linesSizesBeforeCursor ++ [cursorLineSize - 1] ++ linesSizesAfterCursor
-updateLinesSizes _ (Cursor x' _) linesSizes =
-  let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt x' linesSizes
-      cursorLineSize = head linesSizesFromCursor
-      linesSizesAfterCursor =
-        if null linesSizesFromCursor then [] else tail linesSizesFromCursor
-   in (linesSizesBeforeCursor ++ [cursorLineSize + 1] ++ linesSizesAfterCursor)
+updateLinesSizes inputChar (Cursor x' y') linesSizes
+  | inputChar == "\n" = beforeCursor ++ [y', cursorLineSize - y'] ++ afterCursor
+  | inputChar == "\DEL" && y' == 0 = init beforeCursor ++ [cursorLineSize + last beforeCursor] ++ afterCursor
+  | inputChar == "\DEL" = beforeCursor ++ [cursorLineSize - 1] ++ afterCursor
+  | otherwise = beforeCursor ++ [cursorLineSize + 1] ++ afterCursor
+  where
+    (beforeCursor, fromCursor) = splitAt x' linesSizes
+    cursorLineSize = head fromCursor
+    afterCursor
+      | null fromCursor = []
+      | otherwise = tail fromCursor
+
+-- Mais conciso porém menos informativo
+-- updateLinesSizes :: [Char] -> Cursor -> [Int] -> [Int]
+-- updateLinesSizes inputChar (Cursor x' y') linesSizes
+--  | inputChar == "\n" =
+--      let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt x' linesSizes
+--          cursorLineSize = head linesSizesFromCursor
+--          newLineSizeBeforeSplit = y'
+--          newLineSizeAfterSplit = cursorLineSize - y'
+--      in linesSizesBeforeCursor ++ [newLineSizeBeforeSplit] ++ [newLineSizeAfterSplit] ++ linesSizesAfterCursor
+--  | inputChar == "\DEL", y' == 0 =
+--      let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt x' linesSizes
+--          cursorLineSize = head linesSizesFromCursor
+--          previousToCursorLineSize = last linesSizesBeforeCursor
+--          newLineSize = cursorLineSize + previousToCursorLineSize
+--          linesSizesBeforeLineJoin = init linesSizesBeforeCursor
+--          linesSizesAfterCursor = tail linesSizesFromCursor
+--      in linesSizesBeforeLineJoin ++ [newLineSize] ++ linesSizesAfterCursor
+--  | inputChar == "\DEL" =
+--      let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt x' linesSizes
+--          cursorLineSize = head linesSizesFromCursor
+--      in linesSizesBeforeCursor ++ [cursorLineSize - 1] ++ linesSizesAfterCursor
+--  | otherwise =
+--      let (linesSizesBeforeCursor, linesSizesFromCursor) = splitAt x' linesSizes
+--          cursorLineSize = head linesSizesFromCursor
+--      in linesSizesBeforeCursor ++ [cursorLineSize + 1] ++ linesSizesAfterCursor
+--    where
+--      linesSizesAfterCursor
+--        | null fromCursor = []
+--        | otherwise = tail fromCursor
