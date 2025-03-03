@@ -3,7 +3,7 @@ module Editor.NormalMode where
 import Editor.Cursor (updateCursor)
 import Editor.EditorState
   ( EditorState (cursor, extendedPieceTable, mode),
-    Mode (Command, Insert),
+    Mode (Command, Insert, Replace, Visual),
     updateEditorStateCursor,
   )
 import Editor.ExtendedPieceTable
@@ -15,7 +15,8 @@ handleNormalMode :: EditorState -> [Char] -> IO EditorState
 handleNormalMode currentState inputChar
   | inputChar `elem` ["i", "I", "\ESC[2~"] = switchToInsertMode currentState False
   | inputChar `elem` ["a", "A"] = switchToInsertMode currentState True
-  | inputChar `elem` ["r", "R"] = return currentState -- TODO: Switch to Replace Mode
+  | inputChar `elem` ["r", "R"] = return currentState {mode = Replace} -- Switch to Replace Mode
+  | inputChar `elem` ["v", "V"] = return currentState {mode = Visual} -- Switch to Visual Mode
   | inputChar `elem` ["u", "U"] = return currentState -- TODO: UNDO
   | inputChar == "\DC2" = return currentState -- TODO: REDO
   | inputChar == "\DEL" = return (updateEditorStateCursor currentState "h")

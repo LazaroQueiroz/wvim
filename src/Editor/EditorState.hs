@@ -5,7 +5,7 @@ import Editor.ExtendedPieceTable
 import Editor.StatusBar
 import Editor.Viewport
 
-data Mode = Normal | Insert | Command | Closed deriving (Eq)
+data Mode = Normal | Insert | Command | Replace | Visual | Closed deriving (Eq)
 
 data FileStatus = Saved | NotSaved deriving (Eq)
 

@@ -3,7 +3,8 @@ module Editor.InsertMode where
 import Editor.Cursor (Cursor (Cursor), updateCursor, updateCursorPosition)
 import Editor.EditorState
 import Editor.ExtendedPieceTable
-  ( deleteText,
+  ( cursorXYToStringIndex,
+    deleteText,
     insertText,
     updateLinesSizes,
   )
@@ -14,9 +15,9 @@ handleInsertMode :: EditorState -> [Char] -> IO EditorState
 handleInsertMode currentState inputChar
   | inputChar == "\ESC" = handleEscape currentState -- Switches to Normal mode
   | inputChar == "\DEL" && x' == 0 && y' == 0 = return currentState -- Don't delete character
-  | inputChar == "\DEL" = handleDelete currentState True -- Delete character before cursor
+  | inputChar == "\DEL" = handleDelete currentState -- Delete character before cursor
   | inputChar == "\ESC[3~" = return currentState -- TODO: Delete character on cursor
-  | inputChar == "\ESC[2~" = return currentState -- TODO: Switch to Replace Mode
+  | inputChar == "\ESC[2~" = switchToReplaceMode currentState -- Switch to Replace Mode
   | otherwise = handleInsert currentState inputChar -- Inserts character
   where
     Cursor x' y' = cursor currentState
@@ -43,9 +44,8 @@ handleInsert currentState inputChar = do
    in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved}
 
 -- Handles character deletion
-handleDelete :: EditorState -> Bool -> IO EditorState
-handleDelete currentState isBackspace = do
-  -- Not using yet
+handleDelete :: EditorState -> IO EditorState
+handleDelete currentState = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
       newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) linesSizes
@@ -60,7 +60,11 @@ handleDelete currentState isBackspace = do
              in (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes)
    in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved}
 
--- where
---  beforeCursor
---    | isBackspace = 1
---    | otherwise =0
+switchToReplaceMode :: EditorState -> IO EditorState
+switchToReplaceMode currentState = do
+  let newMode = Replace
+      (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = insertText (extendedPieceTable currentState)
+      newCursor = updateCursor 'R' (cursor currentState) lineSizes True
+      newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
+      newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
+   in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}

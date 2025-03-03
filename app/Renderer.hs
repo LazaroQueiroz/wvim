@@ -42,11 +42,22 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
       putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
       putStr $ getLineProgress extendedPieceTable' cursor' ++ " | "
+    Visual -> do
+      putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
+      putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
+      putStr $ getLineProgress extendedPieceTable' cursor' ++ " | "
     Insert -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
       putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      putStr $ "iBuf:" ++ insertBuffer ++ " | "
+    -- putStr $ "oBuf:" ++ show originalBuffer ++ " | "
+    -- putStr $ "aBuf:" ++ show addBuffer ++ " | "
+    -- putStr $ show (piecesCollToString pieces)
+    Replace -> do
+      putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
+      putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      putStr $ "iBuf:" ++ insertBuffer ++ " | "
   where
-    -- putStr $ "iBuf:" ++ insertBuffer ++ " | "
     -- putStr $ "oBuf:" ++ show originalBuffer ++ " | "
     -- putStr $ "aBuf:" ++ show addBuffer ++ " | "
     -- putStr $ show (piecesCollToString pieces)
@@ -62,6 +73,8 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
         Normal -> "Normal"
         Insert -> "Insert"
         Command -> "Command"
+        Replace -> "Replace"
+        Visual -> "Visual"
 
     showStatusBar =
       case sBarMode of
@@ -81,6 +94,8 @@ renderCursor curMode (Cursor x' y') = do
   setCursorPosition x' y'
   case curMode of
     Normal -> putStr "\ESC[1 q"
+    Visual -> putStr "\ESC[1 q"
+    Replace -> putStr "\ESC[1 q"
     Insert -> putStr "\ESC[5 q"
     Command -> putStr "\ESC[5 q"
   hFlush stdout
@@ -89,17 +104,20 @@ renderCursor curMode (Cursor x' y') = do
 printLines :: [String] -> Viewport -> Int -> IO ()
 printLines lines' (Viewport rows' columns' initialRow' initialColumn') row = do
   hideCursor
-  let viewport' = Viewport rows' columns' initialRow' initialColumn'
-  if row == (rows' - 1)
-    then
-      putStr ""
-    else do
-      if null lines'
-        then do
-          putStrLn "~"
-          printLines lines' viewport' (row + 1)
-        else do
-          moveCursor (Cursor 0 row)
-          putStrLn (head lines')
-          printLines (tail lines') viewport' (row + 1)
+  handleLines
   showCursor
+  where
+    viewport' = Viewport rows' columns' initialRow' initialColumn'
+    handleLines
+      | row == (rows' - 1) =
+          do
+            putStr ""
+      | null lines' =
+          do
+            putStrLn "~"
+            printLines lines' viewport' (row + 1)
+      | otherwise =
+          do
+            moveCursor (Cursor 0 row)
+            putStrLn (head lines')
+            printLines (tail lines') viewport' (row + 1)

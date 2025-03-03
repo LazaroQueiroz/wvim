@@ -14,10 +14,13 @@ import System.IO
 getCharRaw :: IO String
 getCharRaw = do
   char <- getChar
-  threadDelay 1000
-  isCharInHandleBuffer <- hReady stdin
-  if isCharInHandleBuffer
-    then getChars [char]
+  if char == '\ESC'
+    then do
+      threadDelay 2000 -- Pequeno atraso para evitar leituras excessivas
+      isCharInHandleBuffer <- hReady stdin
+      if isCharInHandleBuffer
+        then getChars [char] -- Captura sequência completa
+        else return [char]
     else return [char]
 
 -- Função auxiliar que captura uma sequência de caracteres
