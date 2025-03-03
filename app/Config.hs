@@ -1,2 +1,1 @@
--- configurações
-
+module Config where
