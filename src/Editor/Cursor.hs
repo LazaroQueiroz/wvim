@@ -1,5 +1,6 @@
 module Editor.Cursor where
 
+import Editor.Viewport
 import System.Console.ANSI ()
 import System.IO ()
 import Utils
@@ -8,8 +9,8 @@ import Utils
 data Cursor = Cursor {x :: Int, y :: Int} deriving (Show)
 
 -- Updates cursor position based on user input
-updateCursor :: Char -> Cursor -> [Int] -> Bool -> Cursor
-updateCursor input (Cursor x' y') lineSizes isInsertMode
+updateCursor :: Char -> Cursor -> Viewport -> [Int] -> Bool -> Cursor
+updateCursor input (Cursor x' y') (Viewport rows' columns' initialRow' initialColumn') linesSizes isInsertMode
   | input == 'k' -- Move up
     =
       let newX = max 0 (x' - 1)
@@ -18,7 +19,7 @@ updateCursor input (Cursor x' y') lineSizes isInsertMode
        in Cursor newX newY
   | input == 'j' -- Move down
     =
-      let newX = min (length lineSizes - 1) (x' + 1)
+      let newX = min (rows' - 2) (min (length visibleLinesSizes - 1) (x' + 1))
           maxRight = maxY newX
           newY = max 0 (min (maxRight + extra) y')
        in Cursor newX newY
@@ -35,7 +36,8 @@ updateCursor input (Cursor x' y') lineSizes isInsertMode
        in Cursor newX newY
   | otherwise = Cursor x' y' -- No change
   where
-    maxY varX = nth (varX + 1) lineSizes - 1
+    visibleLinesSizes = drop initialRow' linesSizes
+    maxY varX = nth (varX + 1) linesSizes - 1
     extra
       | isInsertMode = 1
       | otherwise = 0
