@@ -32,12 +32,8 @@ renderViewport extendedPieceTable' _ viewport' _ = do
 renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> String -> ExtendedPieceTable -> IO ()
 renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText' extendedPieceTable' = do
   moveCursor (Cursor 0 (rows viewport'))
-  putStr $ "| " ++ showMode mode' ++ " | "
-  case sBarMode of
-    NoException -> do
-      putStr $ "Path: " ++ shownFileName ++ " | "
-    Exception -> do
-      putStr $ errorMsg ++ " | "
+  putStr $ "| " ++ showMode ++ " | "
+  putStr $ showStatusBar ++ " | "
   case mode' of
     Command -> do
       putStr $ ":" ++ commandText'
@@ -48,23 +44,28 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
     Insert -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
       putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
-      putStr $ "iBuf:" ++ insertBuffer ++ " | "
   where
+    -- putStr $ "iBuf:" ++ insertBuffer ++ " | "
     -- putStr $ "oBuf:" ++ show originalBuffer ++ " | "
     -- putStr $ "aBuf:" ++ show addBuffer ++ " | "
     -- putStr $ show (piecesCollToString pieces)
 
     (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable'
+
     shownFileName
       | null filename' = "None"
       | otherwise = filename'
 
-showMode :: Mode -> String
-showMode mode' =
-  case mode' of
-    Normal -> "Normal"
-    Insert -> "Insert"
-    Command -> "Command"
+    showMode =
+      case mode' of
+        Normal -> "Normal"
+        Insert -> "Insert"
+        Command -> "Command"
+
+    showStatusBar =
+      case sBarMode of
+        NoException -> "Path: " ++ shownFileName
+        Exception -> errorMsg
 
 getLineProgress :: ExtendedPieceTable -> Cursor -> String
 getLineProgress (_, _, _, _, _, linesSizes) cursor'
@@ -85,22 +86,22 @@ renderCursor curMode (Cursor x' y') = do
 printLines :: [String] -> Viewport -> Int -> IO ()
 printLines lines' (Viewport rows' columns' initialRow' initialColumn') row
   | row == (rows' - 1) =
-      -- hideCursor
-      putStr ""
-  -- showCursor
+      do
+        hideCursor
+        putStr ""
+        showCursor
   | null lines' =
       do
-        -- hideCursor
+        hideCursor
         putStrLn "~"
         printLines lines' viewport' (row + 1)
-  -- showCursor
+        showCursor
   | otherwise =
       do
-        -- hideCursor
+        hideCursor
         moveCursor (Cursor 0 row)
         putStrLn (head lines')
         printLines (tail lines') viewport' (row + 1)
+        showCursor
   where
-    -- showCursor
-
     viewport' = Viewport rows' columns' initialRow' initialColumn'

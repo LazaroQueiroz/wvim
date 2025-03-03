@@ -13,22 +13,22 @@ import System.IO
 -- @return String that represents the character (composite or individual) received from the user.
 getCharRaw :: IO String
 getCharRaw = do
-  firstChar <- getChar
-  if firstChar == '\ESC'
+  char <- getChar
+  threadDelay 1000
+  isCharInHandleBuffer <- hReady stdin
+  if isCharInHandleBuffer
+    then getChars [char]
+    else return [char]
+
+-- Função auxiliar que captura uma sequência de caracteres
+getChars :: [Char] -> IO String
+getChars charArray = do
+  isCharInHandleBuffer <- hReady stdin
+  if isCharInHandleBuffer
     then do
-      threadDelay 5000
-      isCharInHandleBuffer <- hReady stdin
-      if isCharInHandleBuffer
-        then do
-          -- TODO: Special characters support
-          secondChar <- getChar
-          if secondChar == '['
-            then do
-              thirdChar <- getChar
-              return ['\ESC', '[', thirdChar]
-            else return ['\ESC', secondChar]
-        else return ['\ESC']
-    else return [firstChar]
+      char <- getChar
+      getChars (charArray ++ [char]) -- Funciona, agora vamos ter que resolver as coisas no inputHandler ;-;
+    else return charArray
 
 -- Sets the terminal configurations: disable input buffering and input echoing
 setTerminalConfiguration :: IO ()
@@ -77,7 +77,5 @@ unfoldM f a = do
 -- Verifies if the current editor state is a valid (or running) state. If this is the case, return True, otherwise, False.
 -- @param editorState :: EditorState - current state of the editor.
 isRunning :: EditorState -> Bool
-isRunning (EditorState mode' _ _ _ _ _ _ _) =
-  case mode' of
-    Closed -> False
-    _ -> True
+isRunning (EditorState Closed _ _ _ _ _ _ _) = False
+isRunning _ = True
