@@ -14,7 +14,9 @@ handleInsertMode :: EditorState -> [Char] -> IO EditorState
 handleInsertMode currentState inputChar
   | inputChar == "\ESC" = handleEscape currentState -- Switches to Normal mode
   | inputChar == "\DEL" && x' == 0 && y' == 0 = return currentState -- Don't delete character
-  | inputChar == "\DEL" = handleDelete currentState -- Delete character
+  | inputChar == "\DEL" = handleDelete currentState True -- Delete character before cursor
+  | inputChar == "\ESC[3~" = return currentState -- TODO: Delete character on cursor
+  | inputChar == "\ESC[2~" = return currentState -- TODO: Switch to Replace Mode
   | otherwise = handleInsert currentState inputChar -- Inserts character
   where
     Cursor x' y' = cursor currentState
@@ -41,8 +43,9 @@ handleInsert currentState inputChar = do
    in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved}
 
 -- Handles character deletion
-handleDelete :: EditorState -> IO EditorState
-handleDelete currentState = do
+handleDelete :: EditorState -> Bool -> IO EditorState
+handleDelete currentState isBackspace = do
+  -- Not using yet
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
       newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) linesSizes
@@ -56,3 +59,8 @@ handleDelete currentState = do
             let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', _) = deleteText insertStartIndex 1 extPieceTable
              in (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes)
    in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved}
+
+-- where
+--  beforeCursor
+--    | isBackspace = 1
+--    | otherwise =0

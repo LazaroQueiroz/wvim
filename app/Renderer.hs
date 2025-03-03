@@ -29,6 +29,7 @@ renderViewport extendedPieceTable' _ viewport' _ = do
   printLines lines' viewport' 0
   hFlush stdout
 
+-- Renders the status bar with mode, cursor position, file info, and errors.
 renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> String -> ExtendedPieceTable -> IO ()
 renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText' extendedPieceTable' = do
   moveCursor (Cursor 0 (rows viewport'))
@@ -67,6 +68,7 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
         NoException -> "Path: " ++ shownFileName
         Exception -> errorMsg
 
+-- Returns the cursor's vertical position as "Top", "Bot", or a percentage.
 getLineProgress :: ExtendedPieceTable -> Cursor -> String
 getLineProgress (_, _, _, _, _, linesSizes) cursor'
   | x cursor' == 0 = "Top"
@@ -83,25 +85,21 @@ renderCursor curMode (Cursor x' y') = do
     Command -> putStr "\ESC[5 q"
   hFlush stdout
 
+-- Renders lines in the terminal within a given viewport. (prints ~ for empty lines)
 printLines :: [String] -> Viewport -> Int -> IO ()
-printLines lines' (Viewport rows' columns' initialRow' initialColumn') row
-  | row == (rows' - 1) =
-      do
-        hideCursor
-        putStr ""
-        showCursor
-  | null lines' =
-      do
-        hideCursor
-        putStrLn "~"
-        printLines lines' viewport' (row + 1)
-        showCursor
-  | otherwise =
-      do
-        hideCursor
-        moveCursor (Cursor 0 row)
-        putStrLn (head lines')
-        printLines (tail lines') viewport' (row + 1)
-        showCursor
-  where
-    viewport' = Viewport rows' columns' initialRow' initialColumn'
+printLines lines' (Viewport rows' columns' initialRow' initialColumn') row = do
+  hideCursor
+  let viewport' = Viewport rows' columns' initialRow' initialColumn'
+  if row == (rows' - 1)
+    then
+      putStr ""
+    else do
+      if null lines'
+        then do
+          putStrLn "~"
+          printLines lines' viewport' (row + 1)
+        else do
+          moveCursor (Cursor 0 row)
+          putStrLn (head lines')
+          printLines (tail lines') viewport' (row + 1)
+  showCursor
