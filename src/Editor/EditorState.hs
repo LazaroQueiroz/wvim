@@ -1,51 +1,39 @@
 module Editor.EditorState where
 
-import System.Console.ANSI
-import Editor.ExtendedPieceTable
 import Editor.Cursor
-import Editor.Viewport
+import Editor.ExtendedPieceTable
 import Editor.StatusBar
+import Editor.Viewport
 
-data Mode = Normal | Insert | Command | Closed deriving (Eq)
+data Mode = Normal | Insert | Command | Replace | Visual | Closed deriving (Eq)
+
 data FileStatus = Saved | NotSaved deriving (Eq)
 
-data EditorState = EditorState {
-    mode :: Mode,
+data EditorState = EditorState
+  { mode :: Mode,
     extendedPieceTable :: ExtendedPieceTable,
     cursor :: Cursor,
-    viewPort :: Viewport,
+    viewport :: Viewport,
     fileStatus :: FileStatus,
     filename :: String,
-    statusBar :: StatusBar
-}
+    statusBar :: StatusBar,
+    commandText :: String -- Novo campo para armazenar o texto do comand
+  }
 
+-- Creates an EditorState with default values.
 defaultEditorState :: Int -> Int -> String -> EditorState
-defaultEditorState width height filename = (EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport width height) Saved filename (StatusBar NoException ""))
+defaultEditorState rows' columns' filename' = EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") ""
 
-
+-- Creates an EditorState from a file with content.
 editorStateFromFile :: String -> Int -> Int -> String -> EditorState
-editorStateFromFile file width height filename = (EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport width height) Saved filename (StatusBar NoException ""))
+editorStateFromFile file rows' columns' filename' = EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") ""
 
-
+-- Updates the cursor position in the EditorState based on input direction.
 updateEditorStateCursor :: EditorState -> [Char] -> EditorState
-updateEditorStateCursor state "h" = 
-  let (_, _, _, _, _, lineSizes) = (extendedPieceTable state)
-      newCursor = updateCursor 'h' (cursor state) lineSizes
-  in state { cursor = newCursor }
-updateEditorStateCursor state "l" = 
-  let (_, _, _, _, _, lineSizes) = (extendedPieceTable state)
-      newCursor = updateCursor 'l' (cursor state) lineSizes
-  in state { cursor = newCursor }
-updateEditorStateCursor state "k" = 
-  let (_, _, _, _, _, lineSizes) = (extendedPieceTable state)
-      newCursor = updateCursor 'k' (cursor state) lineSizes
-  in state { cursor = newCursor }
-updateEditorStateCursor state "j" = 
-  let (_, _, _, _, _, lineSizes) = (extendedPieceTable state)
-      newCursor = updateCursor 'j' (cursor state) lineSizes
-  in state { cursor = newCursor }
-updateEditorStateCursor state inputString = state
-
-
-  
-
+updateEditorStateCursor state direction
+  | direction `elem` ["h", "j", "k", "l"] =
+      let (_, _, _, _, _, lineSizes) = extendedPieceTable state
+          isInsertMode = mode state == Insert
+          newCursor = updateCursor (head direction) (cursor state) lineSizes isInsertMode
+       in state {cursor = newCursor}
+  | otherwise = state
