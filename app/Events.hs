@@ -1,1 +1,1 @@
- -- Interpretação de teclas combinadas 
+module Events where
