@@ -2,7 +2,8 @@ module Editor.FileManager where
 
 import Editor.EditorState
   ( EditorState
-      ( extendedPieceTable,
+      ( commandText,
+        extendedPieceTable,
         fileStatus,
         filename,
         mode,
@@ -18,7 +19,7 @@ import System.Exit (exitSuccess)
 import System.IO ()
 import System.Posix.User (getEffectiveUserID)
 
--- Preciso ajeitar isso =(
+-- Self-explanatory, also ugly
 saveFile :: EditorState -> Bool -> [Char] -> IO EditorState
 saveFile state force args = do
   let fname = if null args then filename state else args
@@ -42,6 +43,7 @@ saveFile state force args = do
                     else return $ setError state "Permission denied: Cannot write to file. Use \"w!\" to attempt force, or run with sudo."
             else writeToFile state fname
 
+-- Self-explanatory
 writeToFile :: EditorState -> FilePath -> IO EditorState
 writeToFile state fname = do
   let tempFile = "." ++ fname ++ ".swp"
@@ -52,15 +54,17 @@ writeToFile state fname = do
       { mode = Normal,
         statusBar = clearError (statusBar state),
         filename = if null (filename state) then fname else filename state,
-        fileStatus = Saved
+        fileStatus = Saved,
+        commandText = ""
       }
 
--- Lugar errado lol, vai ficar aqui por enquanto
+-- Self-explanatory, also wrong place? lol
 quitEditor :: EditorState -> IO EditorState
 quitEditor state
   | fileStatus state == NotSaved = return $ setError state "No write since last change. Use \"w\" or \"q!\" to quit without saving."
   | otherwise = exitSuccess
 
+-- Self-explanatory
 saveAndQuit :: EditorState -> Bool -> [Char] -> IO EditorState
 saveAndQuit state force args = do
   newState <- saveFile state force args
@@ -69,8 +73,10 @@ saveAndQuit state force args = do
     Exception -> return newState
     NoException -> exitSuccess
 
+-- Self-explanatory
 setError :: EditorState -> String -> EditorState
-setError state msg = state {mode = Normal, statusBar = (statusBar state) {statusMode = Exception, errorMessage = msg}}
+setError state msg = state {mode = Normal, statusBar = (statusBar state) {statusMode = Exception, errorMessage = msg}, commandText = ""}
 
+-- Self-explanatory
 clearError :: StatusBar -> StatusBar
 clearError sBar = sBar {statusMode = NoException, errorMessage = ""}

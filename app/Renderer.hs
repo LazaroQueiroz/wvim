@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Renderer where
@@ -15,10 +16,10 @@ import Terminal.Render
 -- Renders the current state of the editor: the Viewport (actual content of the file), the status bar (which contains essential information about the editor state and the file) and renders the correct state of the cursor (position and style).
 -- @param editorState :: EditorState -> current state of the editor.
 renderState :: EditorState -> IO ()
-renderState (EditorState mode' extendedPieceTable' cursor' viewport' _ filename' statusBar') = do
+renderState (EditorState mode' extendedPieceTable' cursor' viewport' _ filename' statusBar' commandText') = do
   clearScreen
   renderViewport extendedPieceTable' cursor' viewport' filename'
-  renderStatusBar mode' viewport' cursor' filename' (statusMode statusBar') (errorMessage statusBar') extendedPieceTable'
+  renderStatusBar mode' viewport' cursor' filename' (statusMode statusBar') (errorMessage statusBar') commandText' extendedPieceTable'
   renderCursor mode' cursor'
 
 -- Renders the viewport, meaning that it renders all the contents of the files given the current dimensions of the viewport.
@@ -28,23 +29,35 @@ renderViewport extendedPieceTable' _ viewport' _ = do
   printLines lines' viewport' 0
   hFlush stdout
 
-renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> ExtendedPieceTable -> IO ()
-renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg extendedPieceTable' = do
+renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> String -> ExtendedPieceTable -> IO ()
+renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText' extendedPieceTable' = do
   moveCursor (Cursor 0 (rows viewport'))
   putStr $ "| " ++ showMode mode' ++ " | "
-  -- case sBarMode of
-  --    NoException -> do
-  --      putStr $ "Path: " ++ filename' ++ " | "
-  --    Exception -> do
-  --      putStr $ errorMsg ++ " | "
-  -- putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-  -- putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
-  -- putStr $ getLineProgress extendedPieceTable' cursor' ++ " | "
-  let (pieces, addBuffer, _, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable'
-  putStr $ "sizes:" ++ show linesSizes ++ " | aBuf:" ++ show addBuffer ++ " | iBuf:" ++ insertBuffer ++ " | "
-  putStr $ "stidx:" ++ show insertStartIndex ++ " | " ++ show (piecesCollToString pieces) ++ " | "
+  case sBarMode of
+    NoException -> do
+      putStr $ "Path: " ++ shownFileName ++ " | "
+    Exception -> do
+      putStr $ errorMsg ++ " | "
+  case mode' of
+    Command -> do
+      putStr $ ":" ++ commandText'
+    Normal -> do
+      putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
+      putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
+      putStr $ getLineProgress extendedPieceTable' cursor' ++ " | "
+    Insert -> do
+      putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
+      putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      putStr $ "iBuf:" ++ insertBuffer ++ " | "
+  where
+    -- putStr $ "oBuf:" ++ show originalBuffer ++ " | "
+    -- putStr $ "aBuf:" ++ show addBuffer ++ " | "
+    -- putStr $ show (piecesCollToString pieces)
 
--- TODO: case commandModeText
+    (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable'
+    shownFileName
+      | null filename' = "None"
+      | otherwise = filename'
 
 showMode :: Mode -> String
 showMode mode' =
