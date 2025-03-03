@@ -22,9 +22,9 @@ handleMode currentState inputChar =
 -- Handles user input in Normal mode, updating the editor state accordingly.
 handleNormalMode :: EditorState -> [Char] -> IO EditorState
 handleNormalMode currentState inputChar
-  | inputChar `elem` ["i", "I", "\ESC[2~"] = switchToInsertMode currentState False -- Switch to Insert Mode
+  | inputChar `elem` ["i", "I"] = switchToInsertMode currentState False -- Switch to Insert Mode
   | inputChar `elem` ["a", "A"] = switchToInsertMode currentState True -- Switch to Insert Mode (Alternative)
-  | inputChar `elem` ["r", "R"] = switchToReplaceMode currentState -- Switch to Replace Mode
+  | inputChar == "R" = switchToReplaceMode currentState -- Switch to Replace Mode
   | inputChar `elem` ["v", "V"] = switchToVisualMode currentState -- Switch to Visual Mode
   | inputChar == ":" = switchToCommandMode currentState -- Switch to Command mode
   | inputChar == "\DC2" = return currentState -- TODO: REDO
@@ -34,12 +34,12 @@ handleNormalMode currentState inputChar
 
 -- Handles user input in Replace mode, updating the editor state accordingly.
 handleReplaceMode :: EditorState -> [Char] -> IO EditorState
-handleReplaceMode currentState inputChar
+handleReplaceMode currentState inputChar 
   | inputChar == "\ESC" = switchToNormalMode currentState -- Switch to Normal mode
   | inputChar == "\ESC[2~" = switchToInsertMode currentState False -- Switch to Replace Mode
   | inputChar == "\n" = handleInsert currentState inputChar -- Just do it
   | inputChar == "\DEL" = handleBackspace
-  | otherwise = handleReplace currentState inputChar
+  | otherwise = handleReplace currentState inputChar keepReplace
   where
     (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = extendedPieceTable currentState
     handleBackspace
@@ -54,7 +54,7 @@ handleReplaceMode currentState inputChar
 handleInsertMode :: EditorState -> [Char] -> IO EditorState
 handleInsertMode currentState inputChar
   | inputChar == "\ESC" = switchToNormalMode currentState -- Switch to Normal mode
-  | inputChar == "\ESC[2~" = switchToReplaceMode currentState -- Switch to Replace Mode
+  -- | inputChar == "\ESC[2~" = switchToReplaceMode currentState -- Switch to Replace Mode
   | inputChar == "\ESC[3~" = return currentState -- TODO: Delete character on cursor
   | inputChar == "\DEL" && x' == 0 && y' == 0 = return currentState -- Don't delete character
   | inputChar == "\DEL" = handleDelete currentState -- Delete character before cursor
@@ -117,7 +117,7 @@ handleDelete currentState = do
    in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved}
 
 -- Handles character replacement
-handleReplace :: EditorState -> [Char] -> IO EditorState
+handleReplace :: EditorState -> [Char] -> Bool -> IO EditorState
 handleReplace currentState inputChar = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
@@ -145,8 +145,8 @@ switchToNormalMode currentState = do
    in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
 
 -- Switches to Replace mode ('r' or 'R'), optionally while on Insert by pressing the special char "Insert".
-switchToReplaceMode :: EditorState -> IO EditorState
-switchToReplaceMode currentState = do
+switchToReplaceMode :: EditorState -> Bool -> IO EditorState
+switchToReplaceMode currentState keepReplace = do
   let newMode = Replace
       (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = insertText (extendedPieceTable currentState)
       newCursor = updateCursor 'R' (cursor currentState) lineSizes True

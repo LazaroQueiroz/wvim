@@ -3,7 +3,6 @@ module Editor.Cursor where
 import System.Console.ANSI ()
 import System.IO ()
 import Utils
-
 -- Initial Cursor Position
 data Cursor = Cursor {x :: Int, y :: Int} deriving (Show)
 
