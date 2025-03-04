@@ -4,6 +4,7 @@ import Editor.Cursor
 import Editor.EditorState
 import Editor.ExtendedPieceTable
 import Editor.FileManager
+import Editor.Viewport
 import System.Console.ANSI ()
 import System.Exit (exitSuccess)
 import System.IO ()
@@ -44,8 +45,9 @@ handleReplaceMode currentState inputChar
     handleBackspace
       | not (null insertBuffer) = handleDelete currentState
       | otherwise =
-          let newCursor = updateCursor 'h' (cursor currentState) lineSizes True
-              newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
+          let newCursor = updateCursor 'h' (cursor currentState) (viewport currentState) lineSizes True
+              (Viewport _ _ initialRow' initialColumn') = viewport currentState
+              newInsertStartIndex = cursorXYToStringIndex newCursor initialRow' initialColumn' lineSizes 0 (negate initialRow')
               newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
            in return currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable}
 
@@ -55,7 +57,7 @@ handleInsertMode currentState inputChar
   | inputChar == "\ESC" = switchMode currentState Normal False -- Switch to Normal mode
   | inputChar == "\ESC[2~" = switchMode currentState Replace False -- Switch to Replace Mode
   | inputChar == "\ESC[3~" = return currentState -- TODO: Delete character on cursor
-  | inputChar == "\DEL" && x' == 0 && y' == 0 = return currentState -- Don't delete character
+  | inputChar == "\DEL" && x' == 0 && y' == 0 && initialColumn (viewport currentState) == 0 && initialRow (viewport currentState) == 0 = return currentState -- Don't delete character
   | inputChar == "\DEL" = handleDelete currentState -- Delete character before cursor
   | otherwise = handleInsert currentState inputChar -- Inserts character
   where
@@ -92,20 +94,24 @@ handleInsert :: EditorState -> [Char] -> IO EditorState
 handleInsert currentState inputChar = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
+      (Cursor x' y') = cursor currentState
+      -- (Viewport rows' columns' initialRow' initialColumn') = viewport currentState
+      newViewport = updateViewport (viewport currentState) (x', y') linesSizes (head inputChar) True
       newInsertBuffer = insertBuffer ++ inputChar
-      newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
-      newCursor = updateCursorPosition (cursor currentState) inputChar 0
+      newLinesSizes = updateLinesSizes inputChar (cursor currentState) (initialRow newViewport) (initialColumn newViewport) linesSizes
+      newCursor = updateCursorPosition (cursor currentState) newViewport inputChar 0
       newExtendedPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
-   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved}
+   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, viewport = newViewport, fileStatus = NotSaved}
 
 -- Handles character deletion
 handleDelete :: EditorState -> IO EditorState
 handleDelete currentState = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
-      newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) linesSizes
-      Cursor x' _ = cursor currentState
-      newCursor = updateCursorPosition (cursor currentState) "\DEL" (nth x' linesSizes)
+      Cursor x' y' = cursor currentState
+      newViewport = updateViewport (viewport currentState) (x', y') linesSizes '\DEL' False
+      newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) (initialRow newViewport) (initialColumn newViewport) linesSizes
+      newCursor = updateCursorPosition (cursor currentState) newViewport "\DEL" (nth (x' + initialRow newViewport) linesSizes)
       newExtendedPieceTable
         | not (null insertBuffer) =
             let newInsertBuffer = take (length insertBuffer - 1) insertBuffer
@@ -113,7 +119,7 @@ handleDelete currentState = do
         | otherwise =
             let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', _) = deleteText insertStartIndex 1 extPieceTable
              in (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes)
-   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved}
+   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, viewport = newViewport, fileStatus = NotSaved}
 
 -- Handles character replacement
 handleReplace :: EditorState -> [Char] -> IO EditorState
@@ -121,12 +127,13 @@ handleReplace currentState inputChar = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
       newInsertBuffer = insertBuffer ++ inputChar
-      newCursor = updateCursorPosition (cursor currentState) inputChar 0
+      newCursor = updateCursorPosition (cursor currentState) (viewport currentState) inputChar 0
       Cursor x' y' = newCursor
       tempPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, linesSizes)
       newExtendedPieceTable
         | (linesSizes !! x') < y' =
-            let newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
+            let (Viewport rows' columns' initialRow' initialColumn') = viewport currentState
+                newLinesSizes = updateLinesSizes inputChar (cursor currentState) initialRow' initialColumn' linesSizes
              in (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
         | otherwise =
             let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes) = deleteText (insertStartIndex + 1) 1 tempPieceTable
@@ -141,20 +148,22 @@ switchMode currentState newMode moveCursor =
       let extPieceTable = extendedPieceTable currentState
           newExtendedPieceTable = insertText extPieceTable
           (_, _, _, _, _, linesSizes') = newExtendedPieceTable
-          newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
+          newCursor = updateCursor 'h' (cursor currentState) (viewport currentState) linesSizes' False
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
     Insert ->
-      let (pieces, originalBuffer, addBuffer, insertBuffer, _, linesSizes) = extendedPieceTable currentState
+      let (Viewport _ _ initialRow' initialColumn') = viewport currentState
+          (pieces, originalBuffer, addBuffer, insertBuffer, _, linesSizes) = extendedPieceTable currentState
           newCursor
-            | moveCursor = updateCursor 'l' (cursor currentState) linesSizes True
+            | moveCursor = updateCursor 'l' (cursor currentState) (viewport currentState) linesSizes True
             | otherwise = cursor currentState
-          newInsertStartIndex = cursorXYToStringIndex newCursor linesSizes 0 0
+          newInsertStartIndex = cursorXYToStringIndex newCursor initialRow' initialColumn' linesSizes 0 (negate initialRow')
           newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, linesSizes)
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
     Replace ->
       let (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = insertText (extendedPieceTable currentState)
-          newCursor = updateCursor 'R' (cursor currentState) lineSizes True
-          newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
+          (Viewport _ _ initialRow' initialColumn') = viewport currentState
+          newCursor = updateCursor 'R' (cursor currentState) (viewport currentState) lineSizes True
+          newInsertStartIndex = cursorXYToStringIndex newCursor initialRow' initialColumn' lineSizes 0 (negate initialRow')
           newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
     Command -> return currentState {mode = Command}

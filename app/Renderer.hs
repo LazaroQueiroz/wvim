@@ -34,30 +34,31 @@ renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String 
 renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText' extendedPieceTable' = do
   moveCursor (Cursor 0 (rows viewport'))
   putStr $ "| " ++ showMode ++ " | "
-  putStr $ showPath ++ " | "
+  -- putStr $ showPath ++ " | "
   case mode' of
     Command -> do
       putStr $ ":" ++ commandText'
     Normal -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
       putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
-      putStr $ getLineProgress extendedPieceTable' cursor' ++ " | "
-      putStr $ "iR: " ++ show initialRow' ++ " - iC: " ++ show initialColumn'
+      putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
+      putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      putStr $ "iC" ++ show initialColumn' ++ "iR" ++ show initialRow'
     Visual -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
       putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
-      putStr $ getLineProgress extendedPieceTable' cursor' ++ " | "
+      putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
     Insert -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      --  putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
       -- putStr $ "iBuf:" ++ insertBuffer ++ " | "
       -- putStr $ "oBuf:" ++ show originalBuffer ++ " | "
       -- putStr $ "aBuf:" ++ show addBuffer ++ " | "
       -- putStr $ show (piecesCollToString pieces)
-      putStr $ "iR: " ++ show initialRow' ++ " - iC: " ++ show initialColumn'
+      putStr $ "iC" ++ show initialColumn' ++ "iR" ++ show initialRow'
     Replace -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      putStr $ "siz:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
   where
     (Viewport rows' columns' initialRow' initialColumn') = viewport'
     -- putStr $ "iBuf:" ++ insertBuffer ++ " | "
@@ -85,11 +86,11 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
         Exception -> errorMsg
 
 -- Returns the cursor's vertical position as "Top", "Bot", or a percentage.
-getLineProgress :: ExtendedPieceTable -> Cursor -> String
-getLineProgress (_, _, _, _, _, linesSizes) cursor'
+getLineProgress :: ExtendedPieceTable -> Cursor -> Int -> String
+getLineProgress (_, _, _, _, _, linesSizes) cursor' initialRow'
   | x cursor' == 0 = "Top"
-  | x cursor' == length linesSizes - 1 = "Bot"
-  | otherwise = show ((x cursor' + 1) * 100 `div` length linesSizes) ++ "%"
+  | x cursor' + initialRow' == length linesSizes - 1 = "Bot"
+  | otherwise = show ((x cursor' + 1 + initialRow') * 100 `div` length linesSizes) ++ "%"
 
 -- Renders the cursor in the terminal based on its position and style.
 renderCursor :: Mode -> Cursor -> IO ()

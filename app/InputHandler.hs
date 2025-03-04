@@ -38,17 +38,17 @@ handleMovement state direction isArrow
   | isArrow && (mode state == Insert || mode state == Replace) =
       do
         let (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = insertText (extendedPieceTable state)
-            newCursor = updateCursor direction (cursor state) viewport' lineSizes True
-            newViewport = updateViewport viewport' (x newCursor, y newCursor) (length lineSizes) direction
-            newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
+            newViewport = updateViewport viewport' (x (cursor state), y (cursor state)) lineSizes direction True
+            newCursor = updateCursor direction (cursor state) newViewport lineSizes True
+            newInsertStartIndex = cursorXYToStringIndex newCursor (initialRow newViewport) (initialColumn newViewport) lineSizes 0 (negate (initialRow newViewport))
             newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
          in return state {cursor = newCursor, extendedPieceTable = newExtendedPieceTable, viewport = newViewport}
   | mode state == Insert || mode state == Replace = handleInsertMode state [direction]
   | mode state == Normal || mode state == Visual =
       do
         let (_, _, _, _, _, lineSizes) = extendedPieceTable state
-            newViewport = updateViewport viewport' (x (cursor state), y (cursor state)) (length lineSizes) direction
-            newCursor = updateCursor direction (cursor state) viewport' lineSizes False
+            newViewport = updateViewport viewport' (x (cursor state), y (cursor state)) lineSizes direction False
+            newCursor = updateCursor direction (cursor state) newViewport lineSizes False
          in return state {cursor = newCursor, viewport = newViewport}
   | otherwise = return state
   where

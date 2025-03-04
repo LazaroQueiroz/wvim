@@ -1,5 +1,13 @@
 module Utils where
 
+safeInit :: [Int] -> [Int]
+safeInit [] = []
+safeInit seq' = init seq'
+
+safeLast :: [Int] -> Int
+safeLast [] = 0
+safeLast seq' = last seq'
+
 -- Returns the nth element from a list (1-based index).
 nth :: Int -> [Int] -> Int
 nth _ [] = 0

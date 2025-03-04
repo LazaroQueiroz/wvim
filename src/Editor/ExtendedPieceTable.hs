@@ -99,11 +99,11 @@ extendedPieceTableToLineArray :: ExtendedPieceTable -> [String]
 extendedPieceTableToLineArray extendedPieceTable = splitLines (extendedPieceTableToString extendedPieceTable)
 
 -- Converts a Cursor's position (x, y) to the corresponding string index in the buffer
-cursorXYToStringIndex :: Cursor -> [Int] -> Int -> Int -> Int
-cursorXYToStringIndex (Cursor _ _) [] acc _ = acc
-cursorXYToStringIndex (Cursor x' y') (h : t) acc lineIndex
-  | lineIndex == x' = acc + y' + x'
-  | otherwise = cursorXYToStringIndex (Cursor x' y') t (acc + h) (lineIndex + 1)
+cursorXYToStringIndex :: Cursor -> Int -> Int -> [Int] -> Int -> Int -> Int
+cursorXYToStringIndex (Cursor _ _) _ _ [] acc _ = acc
+cursorXYToStringIndex (Cursor x' y') verticalDisplacement horizontalDisplacement (h : t) acc lineIndex
+  | lineIndex == x' = acc + y' + x' + verticalDisplacement + horizontalDisplacement
+  | otherwise = cursorXYToStringIndex (Cursor x' y') verticalDisplacement horizontalDisplacement t (acc + h) (lineIndex + 1)
 
 -- Splits a string into a list of lines, spliting them with line breaks '\r\n' and '\n'.
 splitLines :: String -> [String]
@@ -122,14 +122,14 @@ getLinesSizes ('\n' : t) lineSize acc = getLinesSizes t 0 (lineSize : acc)
 getLinesSizes (_ : t) lineSize acc = getLinesSizes t (lineSize + 1) acc
 
 -- Updates the line sizes based on the user input, returning the new line sizes.
-updateLinesSizes :: [Char] -> Cursor -> [Int] -> [Int]
-updateLinesSizes inputChar (Cursor x' y') linesSizes
-  | inputChar == "\n" = beforeCursor ++ [y', cursorLineSize - y'] ++ afterCursor
-  | inputChar == "\DEL" && y' == 0 = init beforeCursor ++ [cursorLineSize + last beforeCursor] ++ afterCursor
+updateLinesSizes :: [Char] -> Cursor -> Int -> Int -> [Int] -> [Int]
+updateLinesSizes inputChar (Cursor x' y') verticalDisplacement horizontalDisplacement linesSizes
+  | inputChar == "\n" = beforeCursor ++ [y' + horizontalDisplacement, cursorLineSize - y' + horizontalDisplacement] ++ afterCursor
+  | inputChar == "\DEL" && y' == 0 && horizontalDisplacement == 0 = safeInit beforeCursor ++ [cursorLineSize + safeLast beforeCursor] ++ afterCursor
   | inputChar == "\DEL" = beforeCursor ++ [cursorLineSize - 1] ++ afterCursor
   | otherwise = beforeCursor ++ [cursorLineSize + 1] ++ afterCursor
   where
-    (beforeCursor, fromCursor) = splitAt x' linesSizes
+    (beforeCursor, fromCursor) = splitAt (x' + verticalDisplacement) linesSizes
     cursorLineSize = head fromCursor
     afterCursor
       | null fromCursor = []
