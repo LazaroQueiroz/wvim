@@ -15,13 +15,13 @@ updateCursor input (Cursor x' y') (Viewport rows' columns' initialRow' initialCo
     =
       let newX = max 0 (x' - 1)
           maxRight = maxY newX
-          newY = max 0 (min (columns' - 1) (min (maxRight + extra - initialColumn') y'))
+          newY = max 0 (min (columns' - 1) (min (maxRight - initialColumn') y'))
        in Cursor newX newY
   | input == 'j' -- Move down
     =
       let newX = min (rows' - 2) (min (length visibleLinesSizes - 1) (x' + 1))
           maxRight = maxY newX
-          newY = max 0 (min (columns' - 1) (min (maxRight + extra - initialColumn') y'))
+          newY = max 0 (min (columns' - 1) (min (maxRight - initialColumn') y'))
        in Cursor newX newY
   | input == 'h' -- Move left
     =
@@ -32,7 +32,7 @@ updateCursor input (Cursor x' y') (Viewport rows' columns' initialRow' initialCo
     =
       let newX = x'
           maxRight = maxY newX
-          newY = max 0 (min (columns' - 1) (min (maxRight + extra - initialColumn') (y' + 1)))
+          newY = max 0 (min (columns' - 1) (min (maxRight - initialColumn') (y' + 1)))
        in Cursor newX newY
   | otherwise = Cursor x' y' -- No change
   where
