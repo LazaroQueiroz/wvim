@@ -1,5 +1,10 @@
 module Main where
 
+import Data.List (delete, findIndex)
+import Control.Monad (when)
+import Data.Maybe (fromMaybe)
+
+
 import Control.Concurrent (threadDelay)
 import Editor.EditorState
 import Editor.Viewport
@@ -11,6 +16,69 @@ import System.Environment (getArgs)
 import System.IO
 import System.Process (callCommand)
 
+eventLoop :: [EditorState] -> IO ()
+eventLoop = unfoldM step
+  where
+    step :: [EditorState] -> IO (Maybe [EditorState])
+    step editorStates = do
+      let currentIndex = fromMaybe 0 (findIndex isRunning editorStates)
+          currentState = editorStates !! currentIndex
+          viewport' = viewport currentState
+
+      renderState currentState
+      inputString <- getCharRaw
+
+      case inputString of
+        "[" -> do
+          let newIndex = max 0 (currentIndex - 1)
+          return $ Just (moveToIndex newIndex editorStates)
+
+        "]" -> do
+          let newIndex = min (length editorStates - 1) (currentIndex + 1)
+          return $ Just (moveToIndex newIndex editorStates)
+
+        "{" -> do
+          newEditorState = defaultEditorState (rows viewport') (column viewport') "" 
+          return editorStates ++ [newEditorState]
+
+        _ -> do
+          newState <- handleKeyPress currentState inputString
+          if isRunning newState
+            then return $ Just (replaceAt currentIndex newState editorStates)
+            else do
+              let remainingStates = filter isRunning (replaceAt currentIndex newState editorStates)
+              if null remainingStates
+                then return Nothing
+                else return $ Just remainingStates
+
+moveToIndex :: Int -> [EditorState] -> [EditorState]
+moveToIndex index editorStates =
+  zipWith (\i state -> state { mode = if i == index then Normal else mode state }) [0..] editorStates
+
+replaceAt :: Int -> a -> [a] -> [a]
+replaceAt n newVal xs = take n xs ++ [newVal] ++ drop (n + 1) xs
+
+-- -- Substitui o EditorState na posição dada
+-- replaceAt :: Int -> a -> [a] -> [a]
+-- replaceAt idx newVal xs = take idx xs ++ [newVal] ++ drop (idx + 1) xs
+--
+-- -- Encontra o próximo EditorState que não esteja fechado
+-- findNextOpenEditorIndex :: [EditorState] -> Int -> Int
+-- findNextOpenEditorIndex states currentIndex =
+--   let nextIndexes = [currentIndex + 1 .. length states - 1] ++ [0 .. currentIndex - 1]
+--   in fromMaybe (-1) $ findIndex (not . not(isRunning .)) (map (states !!) nextIndexes)
+-- module Main where
+--
+-- import Control.Concurrent (threadDelay)
+-- import Editor.EditorState
+-- import InputHandler
+-- import Renderer
+-- import System.Console.ANSI
+-- import System.Directory (doesFileExist)
+-- import System.Environment (getArgs)
+-- import System.IO
+-- import System.Process (callCommand)
+--
 -- Read a character with a brief timeout for distinguishing ESC vs arrow keys
 -- @return String that represents the character (composite or individual) received from the user.
 getCharRaw :: IO String
@@ -40,6 +108,8 @@ setTerminalConfiguration :: IO ()
 setTerminalConfiguration = do
   hSetBuffering stdin NoBuffering
   hSetEcho stdin False
+  callCommand "tput rmam" -- disable terminal wrapping
+  -- callCommand "stty sane" -- restore terminal wrapping
   clearScreen
 
 -- Sets the terminal configurations to disable input character buffering and input echoing (writing the input in the terminal as it is received) and start the main event loop.
@@ -61,10 +131,10 @@ main = do
         else do
           return (defaultEditorState rows columns nameOfTheFile) -- Return default state if file doesn't exist
     _ -> return (defaultEditorState rows columns "") -- Fallback for extra arguments, use default state
-  eventLoop [startingState] 0
-
--- Mantain the main recursion loop running. Based on the current editor state, it renders this state, process the user input and then process the new state based on it.
--- @param editorState :: EditorState - current state of the editor.
+  eventLoop [startingState]
+--
+-- -- Mantain the main recursion loop running. Based on the current editor state, it renders this state, process the user input and then process the new state based on it.
+-- -- @param editorState :: EditorState - current state of the editor.
 -- eventLoop :: EditorState -> IO ()
 -- eventLoop = unfoldM step
 --   where
@@ -73,51 +143,7 @@ main = do
 --       inputString <- getCharRaw
 --       newState <- handleKeyPress editorState inputString
 --       return $ if isRunning newState then Just (updateEditorStateViewport newState) else Nothing
-eventLoop :: [EditorState] -> Int -> IO ()
-eventLoop states currentIndex = do
-  let viewport' = viewport (states !! currentIndex)
-  renderState (states !! currentIndex)
-  inputChar <- getCharRaw
-  case inputChar of
-    "[" -> do
-      let newIndex = max 0 (currentIndex - 1)  -- Movendo para o estado à esquerda
-      eventLoop states newIndex
-    
-    "]" -> do
-      let newIndex = min (length states - 1) (currentIndex + 1)  -- Movendo para o estado à direita
-      eventLoop states newIndex
-    
-    "{" -> do
-      let newState = defaultEditorState (rows viewport') (columns viewport') ""
-          newStates = states ++ [newState]
-      let newIndex = min (length newStates - 1) (currentIndex + 1)  -- O novo estado é adicionado à lista
-      eventLoop newStates newIndex
-    
-    _ -> do
-      currentState <- return (states !! currentIndex)
-      newState' <- handleKeyPress currentState inputChar
-
-      let newStates = replaceAt currentIndex newState states
-          newState = updateEditorStateViewport newState'
-      if mode newState == Closed then do
-        let (left, right) = splitAt currentIndex newStates
-        -- Se houver estados à direita, pegamos o próximo
-        let nextStateIndex = if null right then max 0 (currentIndex - 1) else 0
-        -- Se o próximo estado for o último, termina o programa
-        if null right && nextStateIndex == 0 || length newStates == 1 then
-          return ()  -- Finaliza o programa
-        else
-          eventLoop (left ++ (tail right)) nextStateIndex  -- Caso contrário, continua o loop
-      else do
-        eventLoop newStates currentIndex
-
-replaceAt :: Int -> a -> [a] -> [a]
-replaceAt _ _ [] = []  -- Caso base: lista vazia
-replaceAt 0 newVal (x:xs) = newVal : xs  -- Substitui o primeiro elemento
-replaceAt n newVal (x:xs)
-  | n > 0     = x : replaceAt (n - 1) newVal xs  -- Recursão, decrementando n até atingir a posição
-  | otherwise = xs  -- Caso em que n é negativo ou fora do alcance, retorna a lista sem alterações
-
+--
 unfoldM :: (a -> IO (Maybe a)) -> a -> IO ()
 unfoldM f a = do
   result <- f a
