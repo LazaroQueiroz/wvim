@@ -27,3 +27,14 @@ defaultEditorState rows' columns' filename' = EditorState Normal (createExtended
 -- Creates an EditorState from a file with content.
 editorStateFromFile :: String -> Int -> Int -> String -> EditorState
 editorStateFromFile file rows' columns' filename' = EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") ""
+
+-- Updates the cursor position in the EditorState based on input direction.
+updateEditorStateCursor :: EditorState -> [Char] -> EditorState
+updateEditorStateCursor state direction
+  | direction `elem` ["h", "j", "k", "l"] =
+      let (_, _, _, _, _, lineSizes) = extendedPieceTable state
+          isInsertMode = mode state == Insert
+          newCursor = updateCursor (head direction) (cursor state) lineSizes isInsertMode
+       in state {cursor = newCursor}
+  | otherwise = state
+

@@ -2,6 +2,7 @@ module Editor.ModeManager where
 
 import Editor.Cursor
 import Editor.EditorState
+import Editor.MotionHandler
 import Editor.ExtendedPieceTable
 import Editor.FileManager
 import Editor.Viewport
@@ -25,12 +26,14 @@ handleNormalMode :: EditorState -> [Char] -> IO EditorState
 handleNormalMode currentState inputChar
   | inputChar `elem` ["i", "I", "\ESC[2~"] = switchMode currentState Insert False -- Switch to Insert Mode
   | inputChar `elem` ["a", "A"] = switchMode currentState Insert True -- Switch to Insert Mode (Alternative)
-  | inputChar `elem` ["r", "R"] = switchMode currentState Replace False -- Switch to Replace Mode
+  | inputChar == "R" = switchMode currentState Replace False -- Switch to Replace Mode
   | inputChar `elem` ["v", "V"] = switchMode currentState Visual False -- Switch to Visual Mode
   | inputChar == ":" = switchMode currentState Command False -- Switch to Command mode
   | inputChar == "\DC2" = return currentState -- TODO: REDO
   | inputChar `elem` ["u", "U"] = return currentState -- TODO: UNDO
-  | otherwise = return currentState
+  | otherwise = do 
+    newEditorState <- handleMotion currentState inputChar
+    return newEditorState
 
 -- Handles user input in Replace mode, updating the editor state accordingly.
 handleReplaceMode :: EditorState -> [Char] -> IO EditorState
