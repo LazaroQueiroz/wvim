@@ -8,6 +8,7 @@ import System.Console.ANSI
 import System.Directory (doesFileExist)
 import System.Environment (getArgs)
 import System.IO
+import System.Process (callCommand)
 
 -- Read a character with a brief timeout for distinguishing ESC vs arrow keys
 -- @return String that represents the character (composite or individual) received from the user.
@@ -38,6 +39,8 @@ setTerminalConfiguration :: IO ()
 setTerminalConfiguration = do
   hSetBuffering stdin NoBuffering
   hSetEcho stdin False
+  callCommand "tput rmam" -- disable terminal wrapping
+  -- callCommand "stty sane" -- restore terminal wrapping
   clearScreen
 
 -- Sets the terminal configurations to disable input character buffering and input echoing (writing the input in the terminal as it is received) and start the main event loop.
@@ -70,7 +73,7 @@ eventLoop = unfoldM step
       renderState editorState
       inputString <- getCharRaw
       newState <- handleKeyPress editorState inputString
-      return $ if isRunning newState then Just newState else Nothing
+      return $ if isRunning newState then Just (updateEditorStateViewport newState) else Nothing
 
 unfoldM :: (a -> IO (Maybe a)) -> a -> IO ()
 unfoldM f a = do

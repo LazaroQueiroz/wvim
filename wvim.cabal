@@ -71,7 +71,8 @@ executable haskell
                       ansi-terminal,
                       directory,
                       filemanip,
-                      unix
+                      unix,
+                      process
 
     -- Directories containing source files.
     hs-source-dirs:   app

@@ -4,6 +4,7 @@ import Editor.Cursor
 import Editor.EditorState
 import Editor.ExtendedPieceTable
 import Editor.FileManager
+import Editor.Viewport
 import System.Console.ANSI ()
 import System.Exit (exitSuccess)
 import System.IO ()
@@ -22,21 +23,20 @@ handleMode currentState inputChar =
 -- Handles user input in Normal mode, updating the editor state accordingly.
 handleNormalMode :: EditorState -> [Char] -> IO EditorState
 handleNormalMode currentState inputChar
-  | inputChar `elem` ["i", "I", "\ESC[2~"] = switchToInsertMode currentState False -- Switch to Insert Mode
-  | inputChar `elem` ["a", "A"] = switchToInsertMode currentState True -- Switch to Insert Mode (Alternative)
-  | inputChar `elem` ["r", "R"] = switchToReplaceMode currentState -- Switch to Replace Mode
-  | inputChar `elem` ["v", "V"] = switchToVisualMode currentState -- Switch to Visual Mode
-  | inputChar == ":" = switchToCommandMode currentState -- Switch to Command mode
+  | inputChar `elem` ["i", "I", "\ESC[2~"] = switchMode currentState Insert False -- Switch to Insert Mode
+  | inputChar `elem` ["a", "A"] = switchMode currentState Insert True -- Switch to Insert Mode (Alternative)
+  | inputChar `elem` ["r", "R"] = switchMode currentState Replace False -- Switch to Replace Mode
+  | inputChar `elem` ["v", "V"] = switchMode currentState Visual False -- Switch to Visual Mode
+  | inputChar == ":" = switchMode currentState Command False -- Switch to Command mode
   | inputChar == "\DC2" = return currentState -- TODO: REDO
   | inputChar `elem` ["u", "U"] = return currentState -- TODO: UNDO
-  | inputChar == "\DEL" = return (updateEditorStateCursor currentState "h") -- Movement (Alternative)
-  | otherwise = return (updateEditorStateCursor currentState inputChar) -- Movement
+  | otherwise = return currentState
 
 -- Handles user input in Replace mode, updating the editor state accordingly.
 handleReplaceMode :: EditorState -> [Char] -> IO EditorState
 handleReplaceMode currentState inputChar
-  | inputChar == "\ESC" = switchToNormalMode currentState -- Switch to Normal mode
-  | inputChar == "\ESC[2~" = switchToInsertMode currentState False -- Switch to Replace Mode
+  | inputChar == "\ESC" = switchMode currentState Normal False -- Switch to Normal mode
+  | inputChar == "\ESC[2~" = switchMode currentState Insert False -- Switch to Insert Mode
   | inputChar == "\n" = handleInsert currentState inputChar -- Just do it
   | inputChar == "\DEL" = handleBackspace
   | otherwise = handleReplace currentState inputChar
@@ -46,6 +46,7 @@ handleReplaceMode currentState inputChar
       | not (null insertBuffer) = handleDelete currentState
       | otherwise =
           let newCursor = updateCursor 'h' (cursor currentState) lineSizes True
+              (Viewport _ _ initialRow' initialColumn') = viewport currentState
               newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
               newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
            in return currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable}
@@ -53,10 +54,10 @@ handleReplaceMode currentState inputChar
 -- Handles user input in Insert mode, updating the editor state accordingly.
 handleInsertMode :: EditorState -> [Char] -> IO EditorState
 handleInsertMode currentState inputChar
-  | inputChar == "\ESC" = switchToNormalMode currentState -- Switch to Normal mode
-  | inputChar == "\ESC[2~" = switchToReplaceMode currentState -- Switch to Replace Mode
+  | inputChar == "\ESC" = switchMode currentState Normal False -- Switch to Normal mode
+  | inputChar == "\ESC[2~" = switchMode currentState Replace False -- Switch to Replace Mode
   | inputChar == "\ESC[3~" = return currentState -- TODO: Delete character on cursor
-  | inputChar == "\DEL" && x' == 0 && y' == 0 = return currentState -- Don't delete character
+  | inputChar == "\DEL" && x' == 0 && y' == 0 && initialColumn (viewport currentState) == 0 && initialRow (viewport currentState) == 0 = return currentState -- Don't delete character
   | inputChar == "\DEL" = handleDelete currentState -- Delete character before cursor
   | otherwise = handleInsert currentState inputChar -- Inserts character
   where
@@ -93,20 +94,22 @@ handleInsert :: EditorState -> [Char] -> IO EditorState
 handleInsert currentState inputChar = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
+      (Cursor x' y') = cursor currentState
+      (Viewport rows' columns' initialRow' initialColumn') = viewport currentState
       newInsertBuffer = insertBuffer ++ inputChar
       newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
       newCursor = updateCursorPosition (cursor currentState) inputChar 0
       newExtendedPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
-   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved}
+   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved} -- CVH
 
 -- Handles character deletion
 handleDelete :: EditorState -> IO EditorState
 handleDelete currentState = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
+      Cursor x' y' = cursor currentState
       newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) linesSizes
-      Cursor x' _ = cursor currentState
-      newCursor = updateCursorPosition (cursor currentState) "\DEL" (nth x' linesSizes)
+      newCursor = updateCursorPosition (cursor currentState) "\DEL" (linesSizes !! (x' - 1))
       newExtendedPieceTable
         | not (null insertBuffer) =
             let newInsertBuffer = take (length insertBuffer - 1) insertBuffer
@@ -114,7 +117,7 @@ handleDelete currentState = do
         | otherwise =
             let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', _) = deleteText insertStartIndex 1 extPieceTable
              in (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes)
-   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved}
+   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved} -- CVH
 
 -- Handles character replacement
 handleReplace :: EditorState -> [Char] -> IO EditorState
@@ -127,49 +130,42 @@ handleReplace currentState inputChar = do
       tempPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, linesSizes)
       newExtendedPieceTable
         | (linesSizes !! x') < y' =
-            let newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
+            let (Viewport rows' columns' initialRow' initialColumn') = viewport currentState
+                newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
              in (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
         | otherwise =
             let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes) = deleteText (insertStartIndex + 1) 1 tempPieceTable
              in (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex' + 1, newLinesSizes)
    in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved}
 
--- Switches to Normal mode ('\ESC')
-switchToNormalMode :: EditorState -> IO EditorState
-switchToNormalMode currentState = do
-  let newMode = Normal
-      extPieceTable = extendedPieceTable currentState
-      newExtendedPieceTable = insertText extPieceTable
-      (_, _, _, _, _, linesSizes') = newExtendedPieceTable
-      newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
-   in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
-
--- Switches to Replace mode ('r' or 'R'), optionally while on Insert by pressing the special char "Insert".
-switchToReplaceMode :: EditorState -> IO EditorState
-switchToReplaceMode currentState = do
-  let newMode = Replace
-      (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = insertText (extendedPieceTable currentState)
-      newCursor = updateCursor 'R' (cursor currentState) lineSizes True
-      newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
-      newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
-   in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
-
--- Switches to Insert mode ('i' or 'I'), optionally moving the cursor forward ('a' or 'A').
-switchToInsertMode :: EditorState -> Bool -> IO EditorState
-switchToInsertMode currentState moveCursor = do
-  let newMode = Insert
-      (pieces, originalBuffer, addBuffer, insertBuffer, _, linesSizes) = extendedPieceTable currentState
-      newCursor
-        | moveCursor = updateCursor 'l' (cursor currentState) linesSizes True
-        | otherwise = cursor currentState
-      newInsertStartIndex = cursorXYToStringIndex newCursor linesSizes 0 0
-      newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, linesSizes)
-   in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
-
--- Switches to Command mode (':').
-switchToCommandMode :: EditorState -> IO EditorState
-switchToCommandMode currentState = return currentState {mode = Command}
-
--- Switches to Command mode (':').
-switchToVisualMode :: EditorState -> IO EditorState
-switchToVisualMode currentState = return currentState {mode = Visual}
+-- Switches the editor state mode, updating it accordingly.
+switchMode :: EditorState -> Mode -> Bool -> IO EditorState
+switchMode currentState newMode moveCursor =
+  case newMode of
+    Normal ->
+      let extPieceTable = extendedPieceTable currentState
+          newExtendedPieceTable = insertText extPieceTable
+          viewport' = viewport currentState
+          (Cursor x' y') = (cursor currentState)
+          (_, _, _, _, _, linesSizes') = newExtendedPieceTable
+          newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
+       in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor} -- CVH
+    Insert ->
+      let (Viewport _ _ initialRow' initialColumn') = viewport currentState
+          (pieces, originalBuffer, addBuffer, insertBuffer, _, linesSizes) = extendedPieceTable currentState
+          newCursor
+            | moveCursor = updateCursor 'l' (cursor currentState) linesSizes True
+            | otherwise = cursor currentState
+          newInsertStartIndex = cursorXYToStringIndex newCursor linesSizes 0 0
+          newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, linesSizes)
+       in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
+    Replace ->
+      let (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = insertText (extendedPieceTable currentState)
+          (Viewport _ _ initialRow' initialColumn') = viewport currentState
+          newCursor = updateCursor 'R' (cursor currentState) lineSizes True
+          newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
+          newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
+       in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
+    Command -> return currentState {mode = Command}
+    Visual -> return currentState {mode = Visual}
+    _ -> return currentState

@@ -102,7 +102,7 @@ extendedPieceTableToLineArray extendedPieceTable = splitLines (extendedPieceTabl
 cursorXYToStringIndex :: Cursor -> [Int] -> Int -> Int -> Int
 cursorXYToStringIndex (Cursor _ _) [] acc _ = acc
 cursorXYToStringIndex (Cursor x' y') (h : t) acc lineIndex
-  | lineIndex == x' = acc + y' + x'
+  | lineIndex == x' = acc + y' + x' 
   | otherwise = cursorXYToStringIndex (Cursor x' y') t (acc + h) (lineIndex + 1)
 
 -- Splits a string into a list of lines, spliting them with line breaks '\r\n' and '\n'.
@@ -124,13 +124,13 @@ getLinesSizes (_ : t) lineSize acc = getLinesSizes t (lineSize + 1) acc
 -- Updates the line sizes based on the user input, returning the new line sizes.
 updateLinesSizes :: [Char] -> Cursor -> [Int] -> [Int]
 updateLinesSizes inputChar (Cursor x' y') linesSizes
-  | inputChar == "\n" = beforeCursor ++ [y', cursorLineSize - y'] ++ afterCursor
-  | inputChar == "\DEL" && y' == 0 = init beforeCursor ++ [cursorLineSize + last beforeCursor] ++ afterCursor
+  | inputChar == "\n" = beforeCursor  ++ [y', cursorLineSize - y'] ++ afterCursor
+  | inputChar == "\DEL" && y' == 0 = safeInit beforeCursor ++ [cursorLineSize + safeLast beforeCursor] ++ afterCursor
   | inputChar == "\DEL" = beforeCursor ++ [cursorLineSize - 1] ++ afterCursor
   | otherwise = beforeCursor ++ [cursorLineSize + 1] ++ afterCursor
   where
     (beforeCursor, fromCursor) = splitAt x' linesSizes
-    cursorLineSize = head fromCursor
+    cursorLineSize = if length fromCursor == 0 then 0 else head fromCursor
     afterCursor
       | null fromCursor = []
       | otherwise = tail fromCursor
