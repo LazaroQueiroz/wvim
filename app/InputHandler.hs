@@ -62,4 +62,4 @@ handleMovement state direction isArrow
          in return state {cursor = newCursor}
   | otherwise = return state
   where
-    (EditorState _ _ _ viewport' _ _ _ _ _ _) = state
+    (EditorState _ _ _ viewport' _ _ _ _ _ _ _ _) = state

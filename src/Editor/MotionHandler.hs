@@ -11,7 +11,7 @@ import Utils
 handleMotion :: EditorState -> [Char] -> IO EditorState 
 handleMotion currentState inputChar = do
   command <- 
-    if head inputChar `elem` "hjkl$wbxout" then 
+    if head inputChar `elem` "hjkl$wbxoutp" then 
       return inputChar
     else do
       restInput <- getRemainingInput inputChar
@@ -37,6 +37,7 @@ runMotion currentState motion
   | motion == "x" = return (deleteChar currentState)
   | motion == "o" = return (createNewLineBelow currentState)
   | motion == "u" = return (undoEditorState currentState)
+  | motion == "p" = return (pasteCopyBuffer currentState)
   | motion == "t" = return (redoEditorState currentState)
   | head motion == 'r' = return (replaceChar currentState (last motion))
   | otherwise = return currentState
@@ -48,6 +49,19 @@ checkIfLastLineChar currentState =
       x' = x cursor'
       (_, _, _, _, _, linesSizes') = extendedPieceTable currentState
   in (linesSizes' !! x' == 0)
+
+pasteCopyBuffer :: EditorState -> EditorState
+pasteCopyBuffer currentState = 
+  let newUndoStack = addCurrentStateToUndoStack currentState (undoStack currentState)
+      (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', linesSizes') = extendedPieceTable currentState
+      newInsertStartIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0
+      newExtendedPieceTable = insertText (pieces', originalBuffer', addBuffer', (copyBuffer currentState), newInsertStartIndex + 1, linesSizes')
+      (newPieces, newOriginalBuffer, newAddBuffer, newInsertBuffer, _, _) = newExtendedPieceTable
+      currentEditorStateString = extendedPieceTableToString newExtendedPieceTable
+      newLinesSizes = getLinesSizes currentEditorStateString 0 []
+      newEditorStateExtendedPieceTable = (newPieces, newOriginalBuffer, newAddBuffer, newInsertBuffer, newInsertStartIndex, newLinesSizes)
+  in currentState {cursor = (updateCursor 'l' (cursor currentState) newLinesSizes False), extendedPieceTable = newEditorStateExtendedPieceTable, undoStack = newUndoStack}
+
 
 createNewLineBelow :: EditorState -> EditorState
 createNewLineBelow currentState = 
@@ -126,24 +140,6 @@ removeLine currentState =
     
   in currentState { extendedPieceTable = newExtendedPieceTable , cursor = newCursor , fileStatus = NotSaved, undoStack = newUndoStack }
 
--- undoEditorState :: EditorState -> EditorState
--- undoEditorState currentState = 
---   let undoStack' = undoStack currentState
---       redoStack' = redoStack currentState
---
---       newRedoStack = addCurrentStateToRedoStack currentState redoStack'
---
---       -- isso aqui funciona, stack diminui de tamanho
---       newUndoStack = if null undoStack' then [] else init undoStack'
---
---       -- pega ultima coisa do coisa
---       -- (EditorState oldMode oldExtendedPieceTable oldCursor oldViewport oldFileStatus oldFilename oldStatusBar oldCommandText oldUndoStack' oldRedoStack') = if null undoStack' then currentState else last undoStack'
---       oldEditorState
---         | null newUndoStack = currentState
---         | otherwise = last newUndoStack
---
---   in oldEditorState {mode = Normal, undoStack = newUndoStack, redoStack = newRedoStack}
---
 undoEditorState :: EditorState -> EditorState
 undoEditorState currentState = 
   let undoStack' = undoStack currentState
