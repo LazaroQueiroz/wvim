@@ -122,10 +122,10 @@ getLinesSizes ('\n' : t) lineSize acc = getLinesSizes t 0 (lineSize : acc)
 getLinesSizes (_ : t) lineSize acc = getLinesSizes t (lineSize + 1) acc
 
 -- Updates the line sizes based on the user input, returning the new line sizes.
-updateLinesSizes :: [Char] -> Cursor -> Int -> Int -> [Int] -> [Int]
-updateLinesSizes inputChar (Cursor x' y') verticalDisplacement horizontalDisplacement linesSizes
-  | inputChar == "\n" = beforeCursor  ++ [y' + horizontalDisplacement, cursorLineSize - y' + horizontalDisplacement] ++ afterCursor
-  | inputChar == "\DEL" && y' == 0 && horizontalDisplacement == 0 = safeInit beforeCursor ++ [cursorLineSize + safeLast beforeCursor] ++ afterCursor
+updateLinesSizes :: [Char] -> Cursor -> [Int] -> [Int]
+updateLinesSizes inputChar (Cursor x' y') linesSizes
+  | inputChar == "\n" = beforeCursor  ++ [y', cursorLineSize - y'] ++ afterCursor
+  | inputChar == "\DEL" && y' == 0 = safeInit beforeCursor ++ [cursorLineSize + safeLast beforeCursor] ++ afterCursor
   | inputChar == "\DEL" = beforeCursor ++ [cursorLineSize - 1] ++ afterCursor
   | otherwise = beforeCursor ++ [cursorLineSize + 1] ++ afterCursor
   where

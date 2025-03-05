@@ -96,12 +96,12 @@ handleInsert currentState inputChar = do
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
       (Cursor x' y') = cursor currentState
       (Viewport rows' columns' initialRow' initialColumn') = viewport currentState
-      newViewport = updateViewport (viewport currentState) (x', y') linesSizes (head inputChar) True
+      -- newViewport = updateViewport (viewport currentState) (x', y') linesSizes (head inputChar) True
       newInsertBuffer = insertBuffer ++ inputChar
-      newLinesSizes = updateLinesSizes inputChar (cursor currentState) initialRow' initialColumn' linesSizes
+      newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
       newCursor = updateCursorPosition (cursor currentState) inputChar 0
       newExtendedPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
-   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, viewport = newViewport, fileStatus = NotSaved}
+   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved} -- CVH
 
 -- Handles character deletion
 handleDelete :: EditorState -> IO EditorState
@@ -109,8 +109,8 @@ handleDelete currentState = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
       Cursor x' y' = cursor currentState
-      newViewport = updateViewport (viewport currentState) (x', y') linesSizes '\DEL' False
-      newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) (initialRow newViewport) (initialColumn newViewport) linesSizes
+      -- newViewport = updateViewport (viewport currentState) (x', y') linesSizes '\DEL' False
+      newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) linesSizes
       -- newCursor = updateCursorPosition (cursor currentState) "\DEL" (nth (x' + initialRow newViewport) linesSizes)
       newCursor = updateCursorPosition (cursor currentState) "\DEL" (linesSizes !! (x' - 1))
       newExtendedPieceTable
@@ -120,7 +120,7 @@ handleDelete currentState = do
         | otherwise =
             let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', _) = deleteText insertStartIndex 1 extPieceTable
              in (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes)
-   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, viewport = newViewport, fileStatus = NotSaved}
+   in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, fileStatus = NotSaved} -- CVH
 
 -- Handles character replacement
 handleReplace :: EditorState -> [Char] -> IO EditorState
@@ -134,7 +134,7 @@ handleReplace currentState inputChar = do
       newExtendedPieceTable
         | (linesSizes !! x') < y' =
             let (Viewport rows' columns' initialRow' initialColumn') = viewport currentState
-                newLinesSizes = updateLinesSizes inputChar (cursor currentState) initialRow' initialColumn' linesSizes
+                newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
              in (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
         | otherwise =
             let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes) = deleteText (insertStartIndex + 1) 1 tempPieceTable
@@ -151,9 +151,9 @@ switchMode currentState newMode moveCursor =
           viewport' = viewport currentState
           (Cursor x' y') = (cursor currentState)
           (_, _, _, _, _, linesSizes') = newExtendedPieceTable
-          newViewport = updateViewport viewport' (x', y') linesSizes' 'h' False 
+          -- newViewport = updateViewport viewport' (x', y') linesSizes' 'h' False 
           newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
-       in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor, viewport = newViewport}
+       in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor} -- CVH
     Insert ->
       let (Viewport _ _ initialRow' initialColumn') = viewport currentState
           (pieces, originalBuffer, addBuffer, insertBuffer, _, linesSizes) = extendedPieceTable currentState
