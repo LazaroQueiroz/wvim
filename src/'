@@ -135,13 +135,12 @@ undoEditorState currentState =
       redoStack' = redoStack currentState
       newRedoStack = addCurrentStateToRedoStack currentState redoStack'
       (_, _, _, _, _, linesSizes') = extendedPieceTable'
+      (EditorState newMode newExtendedPieceTable newCursor newViewport newFileStatus newFilename newStatusBar newCommandText newUndoStack' newRedoStack') = last undoStack'
+      newNewCursor = updateCursor newCursor linesSizes' False
+      newUndoStack = if null undoStack' then [] else init undoStack'
+  in currentState {mode = Normal, extendedPieceTable = newExtendedPieceTable, cursor = newCursor, viewport = newViewport, fileStatus = NotSaved, statusBar = newStatusBar, commandText = newCommandText, undoStack = newUndoStack, redoStack = newRedoStack}
 
-      (EditorState oldMode oldExtendedPieceTable oldCursor oldViewport oldFileStatus oldFilename oldStatusBar oldCommandText oldUndoStack' oldRedoStack') = if null undoStack' then currentState else last undoStack'
-      (_, _, _, _, _, oldLinesSizes) = oldExtendedPieceTable
 
-      oldUndoStack = if null undoStack' then [] else init undoStack'
-
-  in currentState {mode = Normal, extendedPieceTable = oldExtendedPieceTable, cursor = oldCursor, viewport = oldViewport, fileStatus = NotSaved, statusBar = oldStatusBar, commandText = oldCommandText, undoStack = oldUndoStack, redoStack = newRedoStack}
       
 
 moveToEndOfLine :: EditorState -> Bool -> EditorState

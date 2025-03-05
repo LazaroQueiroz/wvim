@@ -30,7 +30,7 @@ handleNormalMode currentState inputChar
   | inputChar `elem` ["v", "V"] = switchMode currentState Visual False -- Switch to Visual Mode
   | inputChar == ":" = switchMode currentState Command False -- Switch to Command mode
   | inputChar == "\DC2" = return currentState -- TODO: REDO
-  | inputChar `elem` ["u", "U"] = return currentState -- TODO: UNDO
+  -- | inputChar `elem` ["u", "U"] = return currentState -- TODO: UNDO
   | otherwise = do 
     newEditorState <- handleMotion currentState inputChar
     return newEditorState
@@ -147,12 +147,16 @@ switchMode currentState newMode moveCursor =
   case newMode of
     Normal ->
       let extPieceTable = extendedPieceTable currentState
+          undoStack' = undoStack currentState
+          -- redoStack' = redoStack currentState
           newExtendedPieceTable = insertText extPieceTable
           viewport' = viewport currentState
           (Cursor x' y') = (cursor currentState)
           (_, _, _, _, _, linesSizes') = newExtendedPieceTable
           newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
-       in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor} -- CVH
+          newEditorState = currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable}
+          newUndoStack = addCurrentStateToUndoStack currentState undoStack'
+       in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor, undoStack = newUndoStack, redoStack = []} -- CVH
     Insert ->
       let (Viewport _ _ initialRow' initialColumn') = viewport currentState
           (pieces, originalBuffer, addBuffer, insertBuffer, _, linesSizes) = extendedPieceTable currentState

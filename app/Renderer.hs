@@ -16,7 +16,7 @@ import Terminal.Render
 -- Renders the current state of the editor: the Viewport (actual content of the file), the status bar (which contains essential information about the editor state and the file) and renders the correct state of the cursor (position and style).
 -- @param editorState :: EditorState -> current state of the editor.
 renderState :: EditorState -> IO ()
-renderState (EditorState mode' extendedPieceTable' cursor' viewport' _ filename' statusBar' commandText') = do
+renderState (EditorState mode' extendedPieceTable' cursor' viewport' _ filename' statusBar' commandText' _ _) = do
   clearScreen
   renderViewport extendedPieceTable' cursor' viewport' filename'
   renderStatusBar mode' viewport' cursor' filename' (statusMode statusBar') (errorMessage statusBar') commandText' extendedPieceTable'
