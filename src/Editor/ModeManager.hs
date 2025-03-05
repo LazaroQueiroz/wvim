@@ -45,9 +45,9 @@ handleReplaceMode currentState inputChar
     handleBackspace
       | not (null insertBuffer) = handleDelete currentState
       | otherwise =
-          let newCursor = updateCursor 'h' (cursor currentState) (viewport currentState) lineSizes True
+          let newCursor = updateCursor 'h' (cursor currentState) lineSizes True
               (Viewport _ _ initialRow' initialColumn') = viewport currentState
-              newInsertStartIndex = cursorXYToStringIndex newCursor initialRow' initialColumn' lineSizes 0 (negate initialRow')
+              newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
               newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
            in return currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable}
 
@@ -95,11 +95,11 @@ handleInsert currentState inputChar = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
       (Cursor x' y') = cursor currentState
-      -- (Viewport rows' columns' initialRow' initialColumn') = viewport currentState
+      (Viewport rows' columns' initialRow' initialColumn') = viewport currentState
       newViewport = updateViewport (viewport currentState) (x', y') linesSizes (head inputChar) True
       newInsertBuffer = insertBuffer ++ inputChar
-      newLinesSizes = updateLinesSizes inputChar (cursor currentState) (initialRow newViewport) (initialColumn newViewport) linesSizes
-      newCursor = updateCursorPosition (cursor currentState) newViewport inputChar 0
+      newLinesSizes = updateLinesSizes inputChar (cursor currentState) initialRow' initialColumn' linesSizes
+      newCursor = updateCursorPosition (cursor currentState) inputChar 0
       newExtendedPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
    in return currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor, viewport = newViewport, fileStatus = NotSaved}
 
@@ -111,7 +111,8 @@ handleDelete currentState = do
       Cursor x' y' = cursor currentState
       newViewport = updateViewport (viewport currentState) (x', y') linesSizes '\DEL' False
       newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) (initialRow newViewport) (initialColumn newViewport) linesSizes
-      newCursor = updateCursorPosition (cursor currentState) newViewport "\DEL" (nth (x' + initialRow newViewport) linesSizes)
+      -- newCursor = updateCursorPosition (cursor currentState) "\DEL" (nth (x' + initialRow newViewport) linesSizes)
+      newCursor = updateCursorPosition (cursor currentState) "\DEL" (linesSizes !! (x' - 1))
       newExtendedPieceTable
         | not (null insertBuffer) =
             let newInsertBuffer = take (length insertBuffer - 1) insertBuffer
@@ -127,7 +128,7 @@ handleReplace currentState inputChar = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
       newInsertBuffer = insertBuffer ++ inputChar
-      newCursor = updateCursorPosition (cursor currentState) (viewport currentState) inputChar 0
+      newCursor = updateCursorPosition (cursor currentState) inputChar 0
       Cursor x' y' = newCursor
       tempPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, linesSizes)
       newExtendedPieceTable
@@ -147,23 +148,26 @@ switchMode currentState newMode moveCursor =
     Normal ->
       let extPieceTable = extendedPieceTable currentState
           newExtendedPieceTable = insertText extPieceTable
+          viewport' = viewport currentState
+          (Cursor x' y') = (cursor currentState)
           (_, _, _, _, _, linesSizes') = newExtendedPieceTable
-          newCursor = updateCursor 'h' (cursor currentState) (viewport currentState) linesSizes' False
-       in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
+          newViewport = updateViewport viewport' (x', y') linesSizes' 'h' False 
+          newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
+       in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor, viewport = newViewport}
     Insert ->
       let (Viewport _ _ initialRow' initialColumn') = viewport currentState
           (pieces, originalBuffer, addBuffer, insertBuffer, _, linesSizes) = extendedPieceTable currentState
           newCursor
-            | moveCursor = updateCursor 'l' (cursor currentState) (viewport currentState) linesSizes True
+            | moveCursor = updateCursor 'l' (cursor currentState) linesSizes True
             | otherwise = cursor currentState
-          newInsertStartIndex = cursorXYToStringIndex newCursor initialRow' initialColumn' linesSizes 0 (negate initialRow')
+          newInsertStartIndex = cursorXYToStringIndex newCursor linesSizes 0 0
           newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, linesSizes)
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
     Replace ->
       let (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = insertText (extendedPieceTable currentState)
           (Viewport _ _ initialRow' initialColumn') = viewport currentState
-          newCursor = updateCursor 'R' (cursor currentState) (viewport currentState) lineSizes True
-          newInsertStartIndex = cursorXYToStringIndex newCursor initialRow' initialColumn' lineSizes 0 (negate initialRow')
+          newCursor = updateCursor 'R' (cursor currentState) lineSizes True
+          newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
           newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
     Command -> return currentState {mode = Command}

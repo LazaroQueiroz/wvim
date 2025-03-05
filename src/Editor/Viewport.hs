@@ -12,11 +12,14 @@ data Viewport = Viewport
 
 updateViewport :: Viewport -> (Int, Int) -> [Int] -> Char -> Bool -> Viewport
 updateViewport viewport (x', y') lineSizes direction isInsert
-  | y' >= (columns' - 1) && (direction == 'l' || isInsert) && (columns' - 1) + 1 + initialColumn' < nth (x' + 1) lineSizes = scrollRight viewport 1
-  | x' == (rows' - 2) && direction `elem` ['j', '\n'] && (rows' - 2) + 1 + initialRow' < length lineSizes = scrollDown viewport 1
-  | x' == 0 && initialRow' > 0 && direction == 'k' = scrollUp viewport 1
-  | y' == 0 && x' == 0 && direction == '\DEL' && initialRow' > 0 = scrollUp viewport 1
-  | y' == 0 && direction `elem` ['h', '\DEL'] && initialColumn' > 0 = scrollLeft viewport 1
+  -- | y' - (initialColumn viewport) >= (columns' - 1) && (direction == 'l' || isInsert) && (columns' - 1) + 1 + initialColumn' < nth (x' + 1) lineSizes = scrollRight viewport 1
+  | y' - (initialColumn viewport) >= (columns' - 1) && (direction == 'l' || isInsert) = scrollRight viewport 1
+  | x' - (initialRow viewport) == (rows' - 2) && direction `elem` ['\n'] = scrollDown viewport 1
+  | x' - (initialRow viewport) == (rows' - 2) && direction `elem` ['j'] && (rows' - 2) + 1 + initialRow' < length lineSizes = scrollDown viewport 1
+  | x' - (initialRow viewport) == 0 && initialRow' > 0 && direction == 'k' = scrollUp viewport 1
+  -- | y' == 0 && x' - (initialRow viewport) == 0 && direction == '\DEL' && initialRow' > 0 = scrollUp viewport 1
+  | y' - (initialColumn viewport) == 0 && direction == '\DEL' && initialRow' > 0 = scrollUp viewport 1
+  | y' - (initialColumn viewport) == 0 && direction `elem` ['h', '\DEL'] && initialColumn' > 0 = scrollLeft viewport 1
   | otherwise = viewport
   where
     (Viewport rows' columns' initialRow' initialColumn') = viewport
