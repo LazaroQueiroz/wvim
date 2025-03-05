@@ -17,16 +17,18 @@ data EditorState = EditorState
     fileStatus :: FileStatus,
     filename :: String,
     statusBar :: StatusBar,
-    commandText :: String -- Novo campo para armazenar o texto do comand
+    commandText :: String, -- Novo campo para armazenar o texto do comand
+    undoStack :: [EditorState],
+    redoStack :: [EditorState]
   }
 
 -- Creates an EditorState with default values.
 defaultEditorState :: Int -> Int -> String -> EditorState
-defaultEditorState rows' columns' filename' = EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") ""
+defaultEditorState rows' columns' filename' = EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] []
 
 -- Creates an EditorState from a file with content.
 editorStateFromFile :: String -> Int -> Int -> String -> EditorState
-editorStateFromFile file rows' columns' filename' = EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") ""
+editorStateFromFile file rows' columns' filename' = EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] []
 
 -- Updates the cursor position in the EditorState based on input direction.
 updateEditorStateCursor :: EditorState -> [Char] -> EditorState
@@ -37,4 +39,16 @@ updateEditorStateCursor state direction
           newCursor = updateCursor (head direction) (cursor state) lineSizes isInsertMode
        in state {cursor = newCursor}
   | otherwise = state
+
+addCurrentStateToUndoStack :: EditorState -> [EditorState] -> [EditorState]
+addCurrentStateToUndoStack currentState undoStack' =
+  let (_, _, _, insertBuffer', _, _) = extendedPieceTable currentState
+      newUndoStack = undoStack' ++ [currentState {undoStack = [], redoStack = []}]
+  in newUndoStack
+
+addCurrentStateToRedoStack :: EditorState -> [EditorState] -> [EditorState]
+addCurrentStateToRedoStack currentState redoStack =
+  let (_, _, _, insertBuffer', _, _) = extendedPieceTable currentState
+      newRedoStack = [currentState {undoStack = [], redoStack = []}] ++ redoStack
+  in newRedoStack
 
