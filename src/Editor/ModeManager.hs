@@ -15,11 +15,27 @@ handleMode :: EditorState -> [Char] -> IO EditorState
 handleMode currentState inputChar =
   case mode currentState of
     Normal -> handleNormalMode currentState inputChar
-    Visual -> handleNormalMode currentState inputChar
+    Visual -> handleVisualMode currentState inputChar
     Insert -> handleInsertMode currentState inputChar
     Replace -> handleReplaceMode currentState inputChar
     Command -> handleCommandMode currentState inputChar
     _ -> return currentState
+
+
+handleVisualMode :: EditorState -> [Char] -> IO EditorState
+handleVisualMode currentState inputChar
+  | inputChar == "v" = do
+    let (_, _, _, _, _, linesSizes') = extendedPieceTable currentState 
+        currentCursorStringIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0
+        extendedPieceTable' = extendedPieceTable currentState
+        currentEditorStateString = extendedPieceTableToString extendedPieceTable'
+        visualModeStartIndex' = (visualModeStartIndex currentState)
+        newCopyBuffer = take ((abs (visualModeStartIndex' - currentCursorStringIndex)) + 1) (drop (min visualModeStartIndex' currentCursorStringIndex) currentEditorStateString)
+    return currentState {mode = Normal, copyBuffer = newCopyBuffer}
+  | otherwise = do
+    newEditorState <- handleMotion currentState inputChar
+    return newEditorState
+
 
 -- Handles user input in Normal mode, updating the editor state accordingly.
 handleNormalMode :: EditorState -> [Char] -> IO EditorState
@@ -29,8 +45,6 @@ handleNormalMode currentState inputChar
   | inputChar == "R" = switchMode currentState Replace False -- Switch to Replace Mode
   | inputChar `elem` ["v", "V"] = switchMode currentState Visual False -- Switch to Visual Mode
   | inputChar == ":" = switchMode currentState Command False -- Switch to Command mode
-  | inputChar == "\DC2" = return currentState -- TODO: REDO
-  -- | inputChar `elem` ["u", "U"] = return currentState -- TODO: UNDO
   | otherwise = do 
     newEditorState <- handleMotion currentState inputChar
     return newEditorState
@@ -189,5 +203,8 @@ switchMode currentState newMode moveCursor =
           newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
     Command -> return currentState {mode = Command}
-    Visual -> return currentState {mode = Visual}
+    Visual -> 
+      let (_, _, _, _, _, linesSizes') = extendedPieceTable currentState
+          currentCursorStringIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0
+      in return currentState {mode = Visual, visualModeStartIndex = currentCursorStringIndex}
     _ -> return currentState

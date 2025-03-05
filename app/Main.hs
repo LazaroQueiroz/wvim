@@ -83,5 +83,5 @@ unfoldM f a = do
 -- Verifies if the current editor state is a valid (or running) state. If this is the case, return True, otherwise, False.
 -- @param editorState :: EditorState - current state of the editor.
 isRunning :: EditorState -> Bool
-isRunning (EditorState Closed _ _ _ _ _ _ _ _ _) = False
+isRunning (EditorState Closed _ _ _ _ _ _ _ _ _ _ _) = False
 isRunning _ = True

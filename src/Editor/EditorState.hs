@@ -19,16 +19,18 @@ data EditorState = EditorState
     statusBar :: StatusBar,
     commandText :: String, -- Novo campo para armazenar o texto do comand
     undoStack :: [EditorState],
-    redoStack :: [EditorState]
+    redoStack :: [EditorState],
+    visualModeStartIndex :: Int,
+    copyBuffer :: String
   }
 
 -- Creates an EditorState with default values.
 defaultEditorState :: Int -> Int -> String -> EditorState
-defaultEditorState rows' columns' filename' = EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] []
+defaultEditorState rows' columns' filename' = EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] [] 0 ""
 
 -- Creates an EditorState from a file with content.
 editorStateFromFile :: String -> Int -> Int -> String -> EditorState
-editorStateFromFile file rows' columns' filename' = EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] []
+editorStateFromFile file rows' columns' filename' = EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] [] 0 ""
 
 -- Updates the cursor position in the EditorState based on input direction.
 updateEditorStateCursor :: EditorState -> [Char] -> EditorState
