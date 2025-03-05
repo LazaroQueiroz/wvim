@@ -20,7 +20,7 @@ renderState (EditorState mode' extendedPieceTable' cursor' viewport' _ filename'
   clearScreen
   renderViewport extendedPieceTable' cursor' viewport' filename'
   renderStatusBar mode' viewport' cursor' filename' (statusMode statusBar') (errorMessage statusBar') commandText' extendedPieceTable'
-  renderCursor mode' cursor'
+  renderCursor mode' cursor' viewport'
 
 -- Renders the viewport, meaning that it renders all the contents of the files given the current dimensions of the viewport.
 renderViewport :: ExtendedPieceTable -> Cursor -> Viewport -> String -> IO ()
@@ -93,9 +93,9 @@ getLineProgress (_, _, _, _, _, linesSizes) cursor' initialRow'
   | otherwise = show ((x cursor' + 1 + initialRow') * 100 `div` length linesSizes) ++ "%"
 
 -- Renders the cursor in the terminal based on its position and style.
-renderCursor :: Mode -> Cursor -> IO ()
-renderCursor curMode (Cursor x' y') = do
-  setCursorPosition x' y'
+renderCursor :: Mode -> Cursor -> Viewport -> IO ()
+renderCursor curMode (Cursor x' y') viewport = do
+  setCursorPosition (min (x' - (initialRow viewport)) ((rows viewport) - 2)) (min (y' - (initialColumn viewport)) ((columns viewport) - 1))
   case curMode of
     Normal -> putStr "\ESC[1 q"
     Visual -> putStr "\ESC[1 q"

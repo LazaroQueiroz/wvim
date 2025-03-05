@@ -73,7 +73,7 @@ eventLoop = unfoldM step
       renderState editorState
       inputString <- getCharRaw
       newState <- handleKeyPress editorState inputString
-      return $ if isRunning newState then Just newState else Nothing
+      return $ if isRunning newState then Just (updateEditorStateViewport newState) else Nothing
 
 unfoldM :: (a -> IO (Maybe a)) -> a -> IO ()
 unfoldM f a = do

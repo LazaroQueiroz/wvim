@@ -96,7 +96,6 @@ handleInsert currentState inputChar = do
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
       (Cursor x' y') = cursor currentState
       (Viewport rows' columns' initialRow' initialColumn') = viewport currentState
-      -- newViewport = updateViewport (viewport currentState) (x', y') linesSizes (head inputChar) True
       newInsertBuffer = insertBuffer ++ inputChar
       newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
       newCursor = updateCursorPosition (cursor currentState) inputChar 0
@@ -109,9 +108,7 @@ handleDelete currentState = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
       Cursor x' y' = cursor currentState
-      -- newViewport = updateViewport (viewport currentState) (x', y') linesSizes '\DEL' False
       newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) linesSizes
-      -- newCursor = updateCursorPosition (cursor currentState) "\DEL" (nth (x' + initialRow newViewport) linesSizes)
       newCursor = updateCursorPosition (cursor currentState) "\DEL" (linesSizes !! (x' - 1))
       newExtendedPieceTable
         | not (null insertBuffer) =
@@ -151,7 +148,6 @@ switchMode currentState newMode moveCursor =
           viewport' = viewport currentState
           (Cursor x' y') = (cursor currentState)
           (_, _, _, _, _, linesSizes') = newExtendedPieceTable
-          -- newViewport = updateViewport viewport' (x', y') linesSizes' 'h' False 
           newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor} -- CVH
     Insert ->

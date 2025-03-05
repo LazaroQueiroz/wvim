@@ -32,24 +32,34 @@ handleKeyPress state inputChar
         (char : _) -> fromEnum char < 32
         [] -> False
 
+updateEditorStateViewport :: EditorState -> EditorState
+updateEditorStateViewport currentState =
+  let currentViewport = viewport currentState 
+      (_, _, _, _, _, linesSizes') = extendedPieceTable currentState
+      cursor' = cursor currentState
+      y' = y cursor'
+      x' = x cursor'
+      mode' = mode currentState
+      partiallyFixedViewport = updateViewport currentViewport (x', y') linesSizes' (mode' == Insert)
+      newViewport = updateViewport partiallyFixedViewport (x', y') linesSizes' (mode' == Insert)
+  in currentState {viewport = newViewport}
+
 -- Função auxiliar para lidar com o movimento do cursor
 handleMovement :: EditorState -> Char -> Bool -> IO EditorState
 handleMovement state direction isArrow
   | isArrow && (mode state == Insert || mode state == Replace) =
       do
         let (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = insertText (extendedPieceTable state)
-            newViewport = updateViewport viewport' (x (cursor state), y (cursor state)) lineSizes direction True
-            newCursor = updateCursor direction (cursor state) newViewport lineSizes True
-            newInsertStartIndex = cursorXYToStringIndex newCursor (initialRow newViewport) (initialColumn newViewport) lineSizes 0 (negate (initialRow newViewport))
+            newCursor = updateCursor direction (cursor state) lineSizes True
+            newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
             newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
-         in return state {cursor = newCursor, extendedPieceTable = newExtendedPieceTable, viewport = newViewport}
+         in return state {cursor = newCursor, extendedPieceTable = newExtendedPieceTable}
   | mode state == Insert || mode state == Replace = handleInsertMode state [direction]
   | mode state == Normal || mode state == Visual =
       do
         let (_, _, _, _, _, lineSizes) = extendedPieceTable state
-            newViewport = updateViewport viewport' (x (cursor state), y (cursor state)) lineSizes direction False
-            newCursor = updateCursor direction (cursor state) newViewport lineSizes False
-         in return state {cursor = newCursor, viewport = newViewport}
+            newCursor = updateCursor direction (cursor state) lineSizes False
+         in return state {cursor = newCursor}
   | otherwise = return state
   where
     (EditorState _ _ _ viewport' _ _ _ _) = state
