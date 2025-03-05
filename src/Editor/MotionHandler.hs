@@ -131,17 +131,23 @@ undoEditorState currentState =
       filename' = filename currentState
       statusBar' = statusBar currentState
       commandText' = commandText currentState
+
+      -- destaque: historico aqui
       undoStack' = undoStack currentState
       redoStack' = redoStack currentState
+
       newRedoStack = addCurrentStateToRedoStack currentState redoStack'
-      (_, _, _, _, _, linesSizes') = extendedPieceTable'
 
-      (EditorState oldMode oldExtendedPieceTable oldCursor oldViewport oldFileStatus oldFilename oldStatusBar oldCommandText oldUndoStack' oldRedoStack') = if null undoStack' then currentState else last undoStack'
-      (_, _, _, _, _, oldLinesSizes) = oldExtendedPieceTable
+      -- isso aqui funciona, stack diminui de tamanho
+      newUndoStack = if null undoStack' then [] else init undoStack'
 
-      oldUndoStack = if null undoStack' then [] else init undoStack'
+      -- pega ultima coisa do coisa
+      -- (EditorState oldMode oldExtendedPieceTable oldCursor oldViewport oldFileStatus oldFilename oldStatusBar oldCommandText oldUndoStack' oldRedoStack') = if null undoStack' then currentState else last undoStack'
+      oldEditorState
+        | null newUndoStack = currentState
+        | otherwise = last newUndoStack
 
-  in currentState {mode = Normal, extendedPieceTable = oldExtendedPieceTable, cursor = oldCursor, viewport = oldViewport, fileStatus = NotSaved, statusBar = oldStatusBar, commandText = oldCommandText, undoStack = oldUndoStack, redoStack = newRedoStack}
+  in oldEditorState {mode = Normal, undoStack = newUndoStack, redoStack = newRedoStack}
       
 
 moveToEndOfLine :: EditorState -> Bool -> EditorState

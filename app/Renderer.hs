@@ -16,10 +16,10 @@ import Terminal.Render
 -- Renders the current state of the editor: the Viewport (actual content of the file), the status bar (which contains essential information about the editor state and the file) and renders the correct state of the cursor (position and style).
 -- @param editorState :: EditorState -> current state of the editor.
 renderState :: EditorState -> IO ()
-renderState (EditorState mode' extendedPieceTable' cursor' viewport' _ filename' statusBar' commandText' _ _) = do
+renderState (EditorState mode' extendedPieceTable' cursor' viewport' _ filename' statusBar' commandText' undoStack' redoStack') = do
   clearScreen
   renderViewport extendedPieceTable' cursor' viewport' filename'
-  renderStatusBar mode' viewport' cursor' filename' (statusMode statusBar') (errorMessage statusBar') commandText' extendedPieceTable'
+  renderStatusBar mode' viewport' cursor' filename' (statusMode statusBar') (errorMessage statusBar') commandText' extendedPieceTable' undoStack' redoStack'
   renderCursor mode' cursor' viewport'
 
 -- Renders the viewport, meaning that it renders all the contents of the files given the current dimensions of the viewport.
@@ -30,8 +30,8 @@ renderViewport extendedPieceTable' _ viewport' _ = do
   hFlush stdout
 
 -- Renders the status bar with mode, cursor position, file info, and errors.
-renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> String -> ExtendedPieceTable -> IO ()
-renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText' extendedPieceTable' = do
+renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> String -> ExtendedPieceTable -> [EditorState] -> [EditorState] -> IO ()
+renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText' extendedPieceTable' undoStack' redoStack' = do
   moveCursor (Cursor 0 (rows viewport'))
   putStr $ "| " ++ showMode ++ " | "
   -- putStr $ showPath ++ " | "
@@ -42,7 +42,8 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
       putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
       putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
-      putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      -- putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      putStr $ show (length undoStack') ++ " u|r " ++ show (length redoStack')
       putStr $ "iC" ++ show initialColumn' ++ "iR" ++ show initialRow'
     Visual -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "

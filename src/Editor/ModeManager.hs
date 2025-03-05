@@ -147,15 +147,19 @@ switchMode currentState newMode moveCursor =
   case newMode of
     Normal ->
       let extPieceTable = extendedPieceTable currentState
-          undoStack' = undoStack currentState
-          -- redoStack' = redoStack currentState
+
+          -- insert text
           newExtendedPieceTable = insertText extPieceTable
-          viewport' = viewport currentState
           (Cursor x' y') = (cursor currentState)
           (_, _, _, _, _, linesSizes') = newExtendedPieceTable
           newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
-          newEditorState = currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable}
-          newUndoStack = addCurrentStateToUndoStack newEditorState undoStack'
+
+          -- get new undo stack
+          (_, _, _, insertBuffer', _, _) = extPieceTable
+          undoStack' = undoStack currentState
+          newUndoStack
+            | null insertBuffer' = undoStack'
+            | otherwise = addCurrentStateToUndoStack currentState undoStack'
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor, undoStack = newUndoStack, redoStack = []} -- CVH
     Insert ->
       let (Viewport _ _ initialRow' initialColumn') = viewport currentState
