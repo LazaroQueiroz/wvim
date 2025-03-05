@@ -1,12 +1,6 @@
 module Utils where
 
-safeInit :: [Int] -> [Int]
-safeInit [] = []
-safeInit seq' = init seq'
-
-safeLast :: [Int] -> Int
-safeLast [] = 0
-safeLast seq' = last seq'
+import Data.Char (isDigit)
 
 -- Returns the nth element from a list (1-based index).
 nth :: Int -> [Int] -> Int
@@ -28,3 +22,23 @@ replace (h : t) targetChar changeChar acc =
 -- Checks if a number is inside a closed interval [lowerBound, upperBound].
 isInsideClosedInterval :: Int -> Int -> Int -> Bool
 isInsideClosedInterval number lowerBound upperBound = lowerBound <= number && number <= upperBound
+
+isNumber :: Char -> Bool
+isNumber c = c >= '0' && c <= '9'
+
+
+getLeadingNumberAndRest :: String -> (Int, String)
+getLeadingNumberAndRest s = 
+  let (numStr, rest) = span isDigit s
+      number = if null numStr then 1 else read numStr
+  in (number, rest)
+
+safeInit :: [Int] -> [Int]
+safeInit [] = []
+safeInit seq' = init seq'
+
+safeLast :: [Int] -> Int
+safeLast [] = 0
+safeLast seq' = last seq'
+
+
