@@ -51,7 +51,8 @@ checkIfLastLineChar currentState =
 
 createNewLineBelow :: EditorState -> EditorState
 createNewLineBelow currentState = 
-  let endOfLineCursor = (cursor (moveToEndOfLine currentState True))
+  let newUndoStack = addCurrentStateToUndoStack currentState (undoStack currentState)
+      endOfLineCursor = (cursor (moveToEndOfLine currentState True))
       (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', linesSizes') = (extendedPieceTable currentState)
       currentLineSize = linesSizes' !! (x endOfLineCursor)
       newInsertStartIndex = cursorXYToStringIndex endOfLineCursor linesSizes' 0 0
@@ -63,12 +64,13 @@ createNewLineBelow currentState =
       newCursor = updateCursorPosition endOfLineCursor "\n" currentLineSize
       -- newCursor = (Cursor (x endOfLineCursor + 1) 0)
       newExtendedPieceTable = (piecesFinal, originalBufferFinal, addBufferFinal, insertBufferFinal, insertStartIndexFinal + 1, newLinesSizes)
-  in currentState {cursor = newCursor, mode = Insert, extendedPieceTable = newExtendedPieceTable}
+  in currentState {cursor = newCursor, mode = Insert, extendedPieceTable = newExtendedPieceTable, undoStack = newUndoStack}
       
 
 replaceChar :: EditorState -> Char -> EditorState
 replaceChar currentState newChar = 
-  let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', linesSizes') = extendedPieceTable (deleteChar currentState)
+  let newUndoStack = addCurrentStateToUndoStack currentState (undoStack currentState)
+      (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', linesSizes') = extendedPieceTable (deleteChar currentState)
       cursor' = cursor currentState
       y' = y cursor'
       x' = x cursor'
@@ -78,13 +80,14 @@ replaceChar currentState newChar =
       auxiliaryExtendedPieceTable = (pieces', originalBuffer', addBuffer', insertBuffer' ++ [newChar], newInsertStartIndex, newLinesSizes)
       newExtendedPieceTable = insertText auxiliaryExtendedPieceTable
       newCursor = (Cursor x' (min currentLineSize (y' + 1)))
-  in currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable}
+  in currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable, undoStack = newUndoStack}
 
 deleteChar :: EditorState -> EditorState
 deleteChar currentState
   | checkIfLastLineChar currentState = currentState
   | otherwise = 
-      let extPieceTable = extendedPieceTable currentState
+      let newUndoStack = addCurrentStateToUndoStack currentState (undoStack currentState)
+          extPieceTable = extendedPieceTable currentState
           cursor' = (cursor currentState)
           y' = y cursor'
           x' = x cursor'
@@ -96,11 +99,12 @@ deleteChar currentState
           newCursor
             | y' >= (linesSizes' !! x') - 1 = Cursor x' (max 0 (y' - 1))
             | otherwise = cursor'
-      in currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable}
+      in currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable, undoStack = newUndoStack}
 
 removeLine :: EditorState -> EditorState
 removeLine currentState =
-  let extPieceTable = extendedPieceTable currentState
+  let newUndoStack = addCurrentStateToUndoStack currentState (undoStack currentState)
+      extPieceTable = extendedPieceTable currentState
       (_, _, _, _, _, linesSizes') = extPieceTable
       Cursor x' _ = cursor currentState
       
@@ -120,44 +124,69 @@ removeLine currentState =
       newExtendedPieceTable = 
           (newPieces, newOriginalBuffer, newAddBuffer, newInsertBuffer, newInsertStartIndex, newLinesSizes)
     
-  in currentState { extendedPieceTable = newExtendedPieceTable , cursor = newCursor , fileStatus = NotSaved }
+  in currentState { extendedPieceTable = newExtendedPieceTable , cursor = newCursor , fileStatus = NotSaved, undoStack = newUndoStack }
 
+-- undoEditorState :: EditorState -> EditorState
+-- undoEditorState currentState = 
+--   let undoStack' = undoStack currentState
+--       redoStack' = redoStack currentState
+--
+--       newRedoStack = addCurrentStateToRedoStack currentState redoStack'
+--
+--       -- isso aqui funciona, stack diminui de tamanho
+--       newUndoStack = if null undoStack' then [] else init undoStack'
+--
+--       -- pega ultima coisa do coisa
+--       -- (EditorState oldMode oldExtendedPieceTable oldCursor oldViewport oldFileStatus oldFilename oldStatusBar oldCommandText oldUndoStack' oldRedoStack') = if null undoStack' then currentState else last undoStack'
+--       oldEditorState
+--         | null newUndoStack = currentState
+--         | otherwise = last newUndoStack
+--
+--   in oldEditorState {mode = Normal, undoStack = newUndoStack, redoStack = newRedoStack}
+--
 undoEditorState :: EditorState -> EditorState
 undoEditorState currentState = 
   let undoStack' = undoStack currentState
       redoStack' = redoStack currentState
 
-      newRedoStack = addCurrentStateToRedoStack (last undoStack') redoStack'
+      -- Adiciona o estado atual ao Redo Stack
+      newRedoStack
+        | length undoStack' == 0 = redoStack' 
+        | otherwise = addCurrentStateToRedoStack currentState redoStack'
 
-      -- isso aqui funciona, stack diminui de tamanho
-      newUndoStack = if null undoStack' then [] else init undoStack'
+      -- Verifica se o Undo Stack está vazio
+      (newUndoStack, oldEditorState) = 
+        if null undoStack' 
+        then ([], currentState) 
+        else (init undoStack', last undoStack')
 
-      -- pega ultima coisa do coisa
-      -- (EditorState oldMode oldExtendedPieceTable oldCursor oldViewport oldFileStatus oldFilename oldStatusBar oldCommandText oldUndoStack' oldRedoStack') = if null undoStack' then currentState else last undoStack'
-      oldEditorState
-        | null newUndoStack = currentState
-        | otherwise = last newUndoStack
-
-  in oldEditorState {mode = Normal, undoStack = newUndoStack, redoStack = newRedoStack}
+  in oldEditorState 
+       { mode = Normal
+       , undoStack = newUndoStack
+       , redoStack = newRedoStack 
+       }
 
 redoEditorState :: EditorState -> EditorState
 redoEditorState currentState = 
   let undoStack' = undoStack currentState
       redoStack' = redoStack currentState
 
-      newUndoStack = addCurrentStateToUndoStack currentState redoStack'
+      -- Verifica se o Redo Stack está vazio
+      (newRedoStack, oldEditorState) = 
+        if null redoStack' 
+        then ([], currentState) 
+        else (tail redoStack', head redoStack')
 
-      -- isso aqui funciona, stack diminui de tamanho
-      newRedoStack = if null redoStack' then [] else init redoStack'
+      -- Adiciona o estado atual ao Undo Stack
+      newUndoStack 
+        | length redoStack' == 0 = undoStack'
+        | otherwise = addCurrentStateToUndoStack currentState undoStack'
 
-      -- pega ultima coisa do coisa
-      -- (EditorState oldMode oldExtendedPieceTable oldCursor oldViewport oldFileStatus oldFilename oldStatusBar oldCommandText oldUndoStack' oldRedoStack') = if null undoStack' then currentState else last undoStack'
-      oldEditorState
-        | null newRedoStack = currentState
-        | otherwise = last newRedoStack
-
-  in oldEditorState {mode = Normal, undoStack = newUndoStack, redoStack = newRedoStack}
-      
+  in oldEditorState 
+       { mode = Normal
+       , undoStack = newUndoStack
+       , redoStack = newRedoStack 
+       }      
 
 moveToEndOfLine :: EditorState -> Bool -> EditorState
 moveToEndOfLine currentState insertModeOn = 
