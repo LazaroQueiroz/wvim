@@ -11,7 +11,7 @@ import Utils
 handleMotion :: EditorState -> [Char] -> IO EditorState 
 handleMotion currentState inputChar = do
   command <- 
-    if head inputChar `elem` "hjkl$wbxou" then 
+    if head inputChar `elem` "hjkl$wbxout" then 
       return inputChar
     else do
       restInput <- getRemainingInput inputChar
@@ -37,6 +37,7 @@ runMotion currentState motion
   | motion == "x" = return (deleteChar currentState)
   | motion == "o" = return (createNewLineBelow currentState)
   | motion == "u" = return (undoEditorState currentState)
+  | motion == "t" = return (redoEditorState currentState)
   | head motion == 'r' = return (replaceChar currentState (last motion))
   | otherwise = return currentState
 
@@ -123,20 +124,10 @@ removeLine currentState =
 
 undoEditorState :: EditorState -> EditorState
 undoEditorState currentState = 
-  let mode' = mode currentState
-      extendedPieceTable' = extendedPieceTable currentState
-      cursor' = cursor currentState
-      viewport' = viewport currentState
-      fileStatus' = fileStatus currentState
-      filename' = filename currentState
-      statusBar' = statusBar currentState
-      commandText' = commandText currentState
-
-      -- destaque: historico aqui
-      undoStack' = undoStack currentState
+  let undoStack' = undoStack currentState
       redoStack' = redoStack currentState
 
-      newRedoStack = addCurrentStateToRedoStack currentState redoStack'
+      newRedoStack = addCurrentStateToRedoStack (last undoStack') redoStack'
 
       -- isso aqui funciona, stack diminui de tamanho
       newUndoStack = if null undoStack' then [] else init undoStack'
@@ -146,6 +137,24 @@ undoEditorState currentState =
       oldEditorState
         | null newUndoStack = currentState
         | otherwise = last newUndoStack
+
+  in oldEditorState {mode = Normal, undoStack = newUndoStack, redoStack = newRedoStack}
+
+redoEditorState :: EditorState -> EditorState
+redoEditorState currentState = 
+  let undoStack' = undoStack currentState
+      redoStack' = redoStack currentState
+
+      newUndoStack = addCurrentStateToUndoStack currentState redoStack'
+
+      -- isso aqui funciona, stack diminui de tamanho
+      newRedoStack = if null redoStack' then [] else init redoStack'
+
+      -- pega ultima coisa do coisa
+      -- (EditorState oldMode oldExtendedPieceTable oldCursor oldViewport oldFileStatus oldFilename oldStatusBar oldCommandText oldUndoStack' oldRedoStack') = if null undoStack' then currentState else last undoStack'
+      oldEditorState
+        | null newRedoStack = currentState
+        | otherwise = last newRedoStack
 
   in oldEditorState {mode = Normal, undoStack = newUndoStack, redoStack = newRedoStack}
       

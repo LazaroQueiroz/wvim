@@ -24,7 +24,7 @@ data EditorState = EditorState
 
 -- Creates an EditorState with default values.
 defaultEditorState :: Int -> Int -> String -> EditorState
-defaultEditorState rows' columns' filename' = EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] []] []
+defaultEditorState rows' columns' filename' = EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] [] ] []
 
 -- Creates an EditorState from a file with content.
 editorStateFromFile :: String -> Int -> Int -> String -> EditorState
@@ -49,6 +49,6 @@ addCurrentStateToUndoStack currentState undoStack' =
 addCurrentStateToRedoStack :: EditorState -> [EditorState] -> [EditorState]
 addCurrentStateToRedoStack currentState redoStack =
   let (_, _, _, insertBuffer', _, _) = extendedPieceTable currentState
-      newRedoStack = redoStack ++ [currentState {undoStack = [], redoStack = []}]
+      newRedoStack = [currentState {undoStack = [], redoStack = []}] ++ redoStack
   in newRedoStack
 

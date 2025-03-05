@@ -157,9 +157,9 @@ switchMode currentState newMode moveCursor =
           -- get new undo stack
           (_, _, _, insertBuffer', _, _) = extPieceTable
           undoStack' = undoStack currentState
-          newUndoStack
-            | null insertBuffer' = undoStack'
-            | otherwise = addCurrentStateToUndoStack currentState undoStack'
+
+          newUndoStack = addCurrentStateToUndoStack currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor} undoStack'
+
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor, undoStack = newUndoStack, redoStack = []} -- CVH
     Insert ->
       let (Viewport _ _ initialRow' initialColumn') = viewport currentState
