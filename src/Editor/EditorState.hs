@@ -43,9 +43,7 @@ updateEditorStateCursor state direction
 addCurrentStateToUndoStack :: EditorState -> [EditorState] -> [EditorState]
 addCurrentStateToUndoStack currentState undoStack =
   let (_, _, _, insertBuffer', _, _) = extendedPieceTable currentState
-      newUndoStack
-        | insertBuffer' == "" = undoStack
-        | otherwise = undoStack ++ [currentState {undoStack = [], redoStack = []}]
+      newUndoStack = undoStack ++ [currentState {undoStack = [], redoStack = []}]
   in newUndoStack
 
 addCurrentStateToRedoStack :: EditorState -> [EditorState] -> [EditorState]

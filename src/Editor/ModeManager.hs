@@ -155,7 +155,7 @@ switchMode currentState newMode moveCursor =
           (_, _, _, _, _, linesSizes') = newExtendedPieceTable
           newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
           newEditorState = currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable}
-          newUndoStack = addCurrentStateToUndoStack currentState undoStack'
+          newUndoStack = addCurrentStateToUndoStack newEditorState undoStack'
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor, undoStack = newUndoStack, redoStack = []} -- CVH
     Insert ->
       let (Viewport _ _ initialRow' initialColumn') = viewport currentState
