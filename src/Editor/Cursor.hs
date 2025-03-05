@@ -15,17 +15,13 @@ updateCursor input (Cursor x' y') linesSizes isInsertMode
     =
       let newX = max 0 (x' - 1)
           maxRight = maxY newX
-          newY
-            | maxRight == 0 = 0
-            | otherwise = min y' (maxRight + extra)
+          newY = min y' (maxRight + extra newX)
        in Cursor newX newY
   | input == 'j' -- Move down
     =
       let newX = min (length linesSizes - 1) (x' + 1)
           maxRight = maxY newX
-          newY
-            | maxRight == 0 = 0
-            | otherwise = min y' (maxRight + extra)
+          newY = min y' (maxRight + extra newX)
 
        in Cursor newX newY
   | input == 'h' -- Move left
@@ -37,15 +33,13 @@ updateCursor input (Cursor x' y') linesSizes isInsertMode
     =
       let newX = x'
           maxRight = maxY newX
-          newY
-            | maxRight == 0 = 0
-            | otherwise = min (y' + 1) (maxRight + extra)
+          newY = min (y' + 1) (maxRight + extra newX)
        in Cursor newX newY
   | otherwise = Cursor x' y' -- No change
   where
     maxY varX = max 0 ((linesSizes !! varX) - 1)
-    extra
-      | isInsertMode = 1
+    extra varX
+      | isInsertMode && not ((linesSizes !! varX) == 0) = 1
       | otherwise = 0
 
 -- Updates cursor position after text modifications

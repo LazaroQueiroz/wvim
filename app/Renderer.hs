@@ -89,8 +89,8 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
 getLineProgress :: ExtendedPieceTable -> Cursor -> Int -> String
 getLineProgress (_, _, _, _, _, linesSizes) cursor' initialRow'
   | x cursor' == 0 = "Top"
-  | x cursor' + initialRow' == length linesSizes - 1 = "Bot"
-  | otherwise = show ((x cursor' + 1 + initialRow') * 100 `div` length linesSizes) ++ "%"
+  | x cursor' == length linesSizes - 1 = "Bot"
+  | otherwise = show ((x cursor' + 1) * 100 `div` length linesSizes) ++ "%"
 
 -- Renders the cursor in the terminal based on its position and style.
 renderCursor :: Mode -> Cursor -> Viewport -> IO ()
@@ -128,5 +128,5 @@ printLinesLoop visibleLines (Viewport rows' columns' initialRow' initialColumn')
       | otherwise =
           do
             moveCursor (Cursor 0 row)
-            putStrLn (drop initialColumn' (head visibleLines))
+            putStrLn (take (columns' - 2) (drop initialColumn' (head visibleLines)))
             printLinesLoop (tail visibleLines) viewport' (row + 1)
