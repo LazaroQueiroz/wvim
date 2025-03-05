@@ -15,13 +15,18 @@ updateCursor input (Cursor x' y') linesSizes isInsertMode
     =
       let newX = max 0 (x' - 1)
           maxRight = maxY newX
-          newY = min y' (maxRight + extra)
+          newY
+            | maxRight == 0 = 0
+            | otherwise = min y' (maxRight + extra)
        in Cursor newX newY
   | input == 'j' -- Move down
     =
       let newX = min (length linesSizes - 1) (x' + 1)
           maxRight = maxY newX
-          newY = min y' (maxRight + extra)
+          newY
+            | maxRight == 0 = 0
+            | otherwise = min y' (maxRight + extra)
+
        in Cursor newX newY
   | input == 'h' -- Move left
     =
