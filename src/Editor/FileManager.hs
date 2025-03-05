@@ -10,7 +10,7 @@ import Editor.EditorState
         statusBar
       ),
     FileStatus (NotSaved, Saved),
-    Mode (Normal),
+    Mode (Normal, Closed),
   )
 import Editor.ExtendedPieceTable
 import Editor.StatusBar
@@ -62,7 +62,7 @@ writeToFile state fname = do
 quitEditor :: EditorState -> IO EditorState
 quitEditor state
   | fileStatus state == NotSaved = return $ setError state "No write since last change. Use \"w\" or \"q!\" to quit without saving."
-  | otherwise = exitSuccess
+  | otherwise = return state {mode = Closed}
 
 -- Self-explanatory
 saveAndQuit :: EditorState -> Bool -> [Char] -> IO EditorState
@@ -71,7 +71,7 @@ saveAndQuit state force args = do
 
   case statusMode (statusBar newState) of
     Exception -> return newState
-    NoException -> exitSuccess
+    NoException -> return newState {mode = Closed}
 
 -- Self-explanatory
 setError :: EditorState -> String -> EditorState

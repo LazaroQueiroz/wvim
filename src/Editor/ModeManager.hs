@@ -97,8 +97,11 @@ handleCommand :: EditorState -> String -> IO EditorState
 handleCommand state inputString
   | command == "w" = saveFile state False args
   | command == "w!" = saveFile state True args
-  | command == "q" = quitEditor state
-  | command == "q!" = exitSuccess
+  -- | command == "q" = quitEditor state
+  | command == "q" = 
+      return state {mode = Closed}
+  | command == "q!" = 
+      return state {mode = Closed}
   | command == "wq" = saveAndQuit state False args
   | command == "wq!" = saveAndQuit state True args
   | otherwise = return $ setError state "Command not found."
