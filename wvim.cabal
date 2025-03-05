@@ -83,6 +83,7 @@ executable haskell
 
     other-modules: Editor.Cursor
                    Editor.EditorState
+                   Editor.MotionHandler
                    Editor.FileManager
                    Editor.ModeManager
                    Editor.ExtendedPieceTable

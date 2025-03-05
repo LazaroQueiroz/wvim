@@ -88,11 +88,11 @@ deleteChar currentState
           x' = x cursor'
           (_, _, _, _, _, linesSizes') = (extendedPieceTable currentState)
           deleteStartIndex = (cursorXYToStringIndex cursor' linesSizes' 0 0) 
-          newLinesSizes = updateLinesSizes "\DEL" (Cursor x' (y' + 1)) linesSizes'
           (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', _) = deleteText (deleteStartIndex + 1) 1 extPieceTable
+          newLinesSizes = updateLinesSizes "\DEL" (Cursor x' (y' + 1)) linesSizes'
           newExtendedPieceTable = (pieces', originalBuffer', addBuffer', insertBuffer', deleteStartIndex, newLinesSizes)
           newCursor
-            | y' >= (linesSizes' !! x') - 1 = Cursor x' (y' - 1)
+            | y' >= (linesSizes' !! x') - 1 = Cursor x' (max 0 (y' - 1))
             | otherwise = cursor'
       in currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable}
 
