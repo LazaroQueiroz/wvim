@@ -32,7 +32,9 @@ updateCursor input (Cursor x' y') linesSizes isInsertMode
     =
       let newX = x'
           maxRight = maxY newX
-          newY = min (y' + 1) (maxRight + extra)
+          newY
+            | maxRight == 0 = 0
+            | otherwise = min (y' + 1) (maxRight + extra)
        in Cursor newX newY
   | otherwise = Cursor x' y' -- No change
   where
