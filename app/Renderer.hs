@@ -128,5 +128,5 @@ printLinesLoop visibleLines (Viewport rows' columns' initialRow' initialColumn')
       | otherwise =
           do
             moveCursor (Cursor 0 row)
-            putStrLn (take (columns' - 2) (drop initialColumn' (head visibleLines)))
+            putStrLn (take (columns' - 1) (drop initialColumn' (head visibleLines)))
             printLinesLoop (tail visibleLines) viewport' (row + 1)
