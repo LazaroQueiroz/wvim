@@ -1,1 +1,0 @@
-module Terminal.Colors where

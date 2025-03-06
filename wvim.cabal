@@ -94,8 +94,5 @@ executable haskell
                    Renderer
                    Events
                    Config
-                   Terminal.Colors
-                   Terminal.Keyboard
                    Terminal.Render
-                   Terminal.Screen
                    Utils
