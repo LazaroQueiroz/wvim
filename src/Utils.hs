@@ -23,16 +23,13 @@ replace (h : t) targetChar changeChar acc =
 isInsideClosedInterval :: Int -> Int -> Int -> Bool
 isInsideClosedInterval number lowerBound upperBound = lowerBound <= number && number <= upperBound
 
-isNumber :: Char -> Bool
-isNumber c = c >= '0' && c <= '9'
-
 getLeadingNumberAndRest :: String -> (Int, String)
-getLeadingNumberAndRest s = 
+getLeadingNumberAndRest s =
   let (numStr, rest) = span isDigit s
       number = if null numStr then 1 else read numStr
-  in (number, rest)
+   in (number, rest)
 
-safeInit :: [n] -> [n]
+safeInit :: [t] -> [t]
 safeInit [] = []
 safeInit seq' = init seq'
 
@@ -40,18 +37,19 @@ safeLast :: [Int] -> Int
 safeLast [] = 0
 safeLast seq' = last seq'
 
-wordsWhen     :: (Char -> Bool) -> String -> [String]
-wordsWhen p s =  
+wordsWhen :: (Char -> Bool) -> String -> [String]
+wordsWhen p s =
   case dropWhile p s of
-      "" -> []
-      s' -> w : wordsWhen p s''
-        where (w, s'') = break p s'
+    "" -> []
+    s' -> w : wordsWhen p s''
+      where
+        (w, s'') = break p s'
 
 -- replaceAll :: Regex -> (String -> String) -> String -> String
 -- replaceAll re f s = start end
 --   where
 --     (_, end, start) = foldl' go (0, s, id) $ getAllMatches $ match re s
 --     go (ind, read, write) (off, len) =
---         let (skip, start) = splitAt (off - ind) read 
---             (matched, remaining) = splitAt len start 
+--         let (skip, start) = splitAt (off - ind) read
+--             (matched, remaining) = splitAt len start
 --         in (off + len, remaining, write . (skip++) . (f matched ++))
