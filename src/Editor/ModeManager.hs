@@ -60,6 +60,7 @@ replaceRegex currentState segments =
 
 handleVisualMode :: EditorState -> [Char] -> IO EditorState
 handleVisualMode currentState inputChar
+  | inputChar == "\ESC" = return (currentState {mode = Normal})
   | inputChar == "v" = do
     let (_, _, _, _, _, linesSizes') = extendedPieceTable currentState 
         currentCursorStringIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0

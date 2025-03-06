@@ -34,49 +34,27 @@ renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String 
 renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText' extendedPieceTable' undoStack' redoStack' copyBuffer' searchBuffer' = do
   moveCursor (Cursor 0 (rows viewport'))
   putStr $ "| " ++ showMode ++ " | "
-  -- putStr $ showPath ++ " | "
+  putStr $ showPath ++ " | "
   case mode' of
     Command -> do
       putStr $ ":" ++ commandText'
     Normal -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
       putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
-      -- putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
-      putStr $ "copyBuffer:" ++ copyBuffer' ++ " | "
-      putStr $ show (length undoStack') ++ " u|r " ++ show (length redoStack') ++ " | "
-      putStr $ "iC" ++ show initialColumn' ++ "iR" ++ show initialRow'
     Visual -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
       putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
     Insert -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      -- putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
-      -- putStr $ "iBuf:" ++ insertBuffer ++ " | "
-      -- putStr $ "oBuf:" ++ show originalBuffer ++ " | "
-      -- putStr $ "aBuf:" ++ show addBuffer ++ " | "
-      -- putStr $ show (piecesCollToString pieces)
-      putStr $ "iC" ++ show initialColumn' ++ "iR" ++ show initialRow'
+      putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
     Replace -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      putStr $ "siz:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
     Substitution -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
-      putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
       putStr $ searchBuffer' ++ " | "
-      -- putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
-      -- putStr $ "iBuf:" ++ insertBuffer ++ " | "
-      -- putStr $ "oBuf:" ++ show originalBuffer ++ " | "
-      -- putStr $ "aBuf:" ++ show addBuffer ++ " | "
-      -- putStr $ show (piecesCollToString pieces)
   where
     (Viewport rows' columns' initialRow' initialColumn') = viewport'
-    -- putStr $ "iBuf:" ++ insertBuffer ++ " | "
-    -- putStr $ "oBuf:" ++ show originalBuffer ++ " | "
-    -- putStr $ "aBuf:" ++ show addBuffer ++ " | "
-    -- putStr $ show (piecesCollToString pieces)
 
     (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable'
 
