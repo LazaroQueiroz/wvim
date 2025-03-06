@@ -44,13 +44,14 @@ handleSubstitutionMode state inputChar
 
 replaceRegex :: EditorState -> [String] -> EditorState
 replaceRegex currentState segments =
-  let extendedPieceTable' = extendedPieceTable currentState
+  let newUndoStack = addCurrentStateToUndoStack currentState (undoStack currentState)
+      extendedPieceTable' = extendedPieceTable currentState
       currentEditorStateString = extendedPieceTableToString extendedPieceTable'
       newEditorStateString = subRegex (mkRegex (head segments)) currentEditorStateString (segments !! 1)
       (pieces', originalBuffer', addBuffer', insertBuffer', _, linesSizes') = createExtendedPieceTable newEditorStateString
       newInsertStartIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0
       newExtendedPieceTable = (pieces', originalBuffer', addBuffer', insertBuffer', newInsertStartIndex, linesSizes')
-  in currentState { mode = Normal, extendedPieceTable = newExtendedPieceTable, searchBuffer = "" }
+  in currentState { mode = Normal, extendedPieceTable = newExtendedPieceTable, searchBuffer = "", undoStack = newUndoStack }
 
 handleVisualMode :: EditorState -> [Char] -> IO EditorState
 handleVisualMode currentState inputChar
