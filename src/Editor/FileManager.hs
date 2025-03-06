@@ -43,12 +43,21 @@ saveFile state force args = do
                     else return $ setError state "Permission denied: Cannot write to file. Use \"w!\" to attempt force, or run with sudo."
             else writeToFile state fname
 
+splitDirAndFileName :: String -> (String, String)
+splitDirAndFileName path =
+  let reversedPath = reverse path
+      (reversedFilename, reversedDirname) = break (== '/') reversedPath
+      newFilename = reverse reversedFilename
+      newDirname = reverse reversedDirname
+  in (newFilename, newDirname)
+
 -- Self-explanatory
 writeToFile :: EditorState -> FilePath -> IO EditorState
-writeToFile state fname = do
-  let tempFile = "." ++ fname ++ ".swp"
+writeToFile state fname' = do
+  let (fname, dname) = splitDirAndFileName fname'
+      tempFile = dname ++ "." ++ fname ++ ".swp"
   writeFile tempFile (extendedPieceTableToString (extendedPieceTable state))
-  renameFile tempFile fname
+  renameFile tempFile fname'
   return
     state
       { mode = Normal,
