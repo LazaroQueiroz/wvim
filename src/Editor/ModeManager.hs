@@ -46,7 +46,7 @@ handleSubstitutionMode state inputChar
   where
     deleteSearchText
       | null (searchBuffer state) = return state
-      | otherwise = return $ state {searchBuffer = init (searchBuffer state)}
+      | otherwise = return $ state {searchBuffer = init (searchBuffer state), fileStatus = NotSaved}
 
 replaceRegex :: EditorState -> [String] -> EditorState
 replaceRegex currentState segments =
@@ -135,9 +135,7 @@ handleCommand :: EditorState -> String -> IO EditorState
 handleCommand state inputString
   | command == "w" = saveFile state False args
   | command == "w!" = saveFile state True args
-  -- | command == "q" = quitEditor state
-  | command == "q" = 
-      return state {mode = Closed}
+  | command == "q" = quitEditor state
   | command == "q!" = 
       return state {mode = Closed}
   | command == "wq" = saveAndQuit state False args
@@ -236,6 +234,7 @@ switchMode currentState newMode moveCursor =
             | currentEditorStateString == previousEditorStateString = undoStack'
             | otherwise = addCurrentStateToUndoStack currentState undoStack'
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor, undoStack = newUndoStack, redoStack = []}
+
     Replace ->
       let (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = insertText (extendedPieceTable currentState)
           (Viewport _ _ initialRow' initialColumn') = viewport currentState
