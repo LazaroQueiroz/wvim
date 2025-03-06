@@ -72,7 +72,8 @@ executable haskell
                       directory,
                       filemanip,
                       unix,
-                      process
+                      process,
+                      regex-compat
 
     -- Directories containing source files.
     hs-source-dirs:   app
