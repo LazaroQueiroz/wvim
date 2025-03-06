@@ -20,7 +20,7 @@ handleKeyPress state inputChar
               "\ESC[D" -> 'h'
               _ -> head inputChar
          in handleMovement state direction True
-  | inputChar `elem` ["h", "j", "k", "l"] =
+  | inputChar `elem` ["h", "j", "k", "l"] && mode state == Normal =
       do
         let direction = head inputChar
          in handleMovement state direction False
@@ -62,4 +62,4 @@ handleMovement state direction isArrow
          in return state {cursor = newCursor}
   | otherwise = return state
   where
-    (EditorState _ _ _ viewport' _ _ _ _ _ _ _ _) = state
+    (EditorState _ _ _ viewport' _ _ _ _ _ _ _ _ _) = state

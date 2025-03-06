@@ -45,7 +45,9 @@ deleteText :: Int -> Int -> ExtendedPieceTable -> ExtendedPieceTable
 deleteText startDeleteIndex length' (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) =
   let (piecesBeforeDeletion, piecesAfterDeletionStart) = splitPieceCollection (startDeleteIndex - 1) pieces
       (_, piecesAfterDeletion) = splitPieceCollection length' piecesAfterDeletionStart
-      newPiecesCollection = piecesBeforeDeletion ++ piecesAfterDeletion
+      newPiecesCollection
+        | null (piecesBeforeDeletion ++ piecesAfterDeletion) = [Piece Original 0 0]
+        | otherwise = piecesBeforeDeletion ++ piecesAfterDeletion
    in (newPiecesCollection, originalBuffer, addBuffer, insertBuffer, insertStartIndex - length', linesSizes)
 
 -- Splits the Piece Collection at the specified index, returning two parts: one before the index and one after the index.

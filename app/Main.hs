@@ -75,41 +75,50 @@ main = do
 --       return $ if isRunning newState then Just (updateEditorStateViewport newState) else Nothing
 eventLoop :: [EditorState] -> Int -> IO ()
 eventLoop states currentIndex = do
-  let viewport' = viewport (states !! currentIndex)
-  renderState (states !! currentIndex)
+  let currentState = (states !! currentIndex) 
+      viewport' = viewport currentState
+  renderState currentState
   inputChar <- getCharRaw
-  case inputChar of
-    "[" -> do
-      let newIndex = max 0 (currentIndex - 1)  -- Movendo para o estado à esquerda
-      eventLoop states newIndex
-    
-    "]" -> do
-      let newIndex = min (length states - 1) (currentIndex + 1)  -- Movendo para o estado à direita
-      eventLoop states newIndex
-    
-    "{" -> do
-      let newState = defaultEditorState (rows viewport') (columns viewport') ""
-          newStates = states ++ [newState]
-      let newIndex = min (length newStates - 1) (currentIndex + 1)  -- O novo estado é adicionado à lista
-      eventLoop newStates newIndex
-    
-    _ -> do
-      currentState <- return (states !! currentIndex)
-      newState' <- handleKeyPress currentState inputChar
 
-      let newStates = replaceAt currentIndex newState states
-          newState = updateEditorStateViewport newState'
-      if mode newState == Closed then do
-        let (left, right) = splitAt currentIndex newStates
-        -- Se houver estados à direita, pegamos o próximo
-        let nextStateIndex = if null right then max 0 (currentIndex - 1) else 0
-        -- Se o próximo estado for o último, termina o programa
-        if null right && nextStateIndex == 0 || length newStates == 1 then
-          return ()  -- Finaliza o programa
-        else
-          eventLoop (left ++ (tail right)) nextStateIndex  -- Caso contrário, continua o loop
-      else do
-        eventLoop newStates currentIndex
+  if mode currentState == Normal then
+    case inputChar of
+      "[" -> do
+        let newIndex = max 0 (currentIndex - 1)  -- Movendo para o estado à esquerda
+        eventLoop states newIndex
+      
+      "]" -> do
+        let newIndex = min (length states - 1) (currentIndex + 1)  -- Movendo para o estado à direita
+        eventLoop states newIndex
+      
+      "{" -> do
+        let newState = defaultEditorState (rows viewport') (columns viewport') ""
+            newStates = states ++ [newState]
+        let newIndex = min (length newStates - 1) (currentIndex + 1)  -- O novo estado é adicionado à lista
+        eventLoop newStates newIndex
+      
+      _ -> handleOtherInput currentState inputChar states currentIndex
+    else
+      handleOtherInput currentState inputChar states currentIndex
+
+
+handleOtherInput :: EditorState -> String -> [EditorState] -> Int -> IO ()
+handleOtherInput currentState inputChar states currentIndex = do
+  newState' <- handleKeyPress currentState inputChar
+  let newStates = replaceAt currentIndex newState states
+      newState = updateEditorStateViewport newState'
+
+  if mode newState == Closed then do
+    let (left, right) = splitAt currentIndex newStates
+    let nextStateIndex = if null right then max 0 (currentIndex - 1) else 0
+
+    if null right && nextStateIndex == 0 || length newStates == 1 then
+      return ()
+    else
+      eventLoop (left ++ tail right) nextStateIndex
+
+  else
+    eventLoop newStates currentIndex
+
 
 replaceAt :: Int -> a -> [a] -> [a]
 replaceAt _ _ [] = []  -- Caso base: lista vazia
@@ -126,5 +135,5 @@ unfoldM f a = do
 -- Verifies if the current editor state is a valid (or running) state. If this is the case, return True, otherwise, False.
 -- @param editorState :: EditorState - current state of the editor.
 isRunning :: EditorState -> Bool
-isRunning (EditorState Closed _ _ _ _ _ _ _ _ _ _ _) = False
+isRunning (EditorState Closed _ _ _ _ _ _ _ _ _ _ _ _) = False
 isRunning _ = True
