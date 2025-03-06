@@ -1,7 +1,5 @@
 module Editor.Viewport where
 
-import Utils
-
 data Viewport = Viewport
   { rows :: Int,
     columns :: Int,
@@ -11,8 +9,8 @@ data Viewport = Viewport
   deriving (Show, Eq)
 
 
-updateViewport :: Viewport -> (Int, Int) -> [Int] -> Bool -> Viewport
-updateViewport viewport (x', y') lineSizes isInsert
+updateViewport :: Viewport -> (Int, Int) -> Viewport
+updateViewport viewport (x', y')
   | x' < initialRow' = scrollUp viewport (initialRow' - x')
   | (x' - initialRow') > (rows' - 2) = scrollDown viewport (x' - initialRow' - rows' + 2)
   | y' < initialColumn' = scrollLeft viewport (initialColumn' - y')

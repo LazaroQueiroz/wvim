@@ -1,4 +1,4 @@
-module Terminal.Render where
+module Render where
 
 import Editor.Cursor
 import System.Console.ANSI

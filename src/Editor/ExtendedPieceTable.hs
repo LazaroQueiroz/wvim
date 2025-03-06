@@ -73,7 +73,6 @@ splitPiece splitIndex (Piece bufType pieceStartIndex len)
         [Piece bufType (pieceStartIndex + splitIndex) (len - splitIndex)]
       )
 
--- Idk
 extendedPieceTableToString :: ExtendedPieceTable -> String
 extendedPieceTableToString (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, _) =
   foldl
@@ -104,7 +103,7 @@ extendedPieceTableToLineArray extendedPieceTable = splitLines (extendedPieceTabl
 cursorXYToStringIndex :: Cursor -> [Int] -> Int -> Int -> Int
 cursorXYToStringIndex (Cursor _ _) [] acc _ = acc
 cursorXYToStringIndex (Cursor x' y') (h : t) acc lineIndex
-  | lineIndex == x' = acc + y' + x' 
+  | lineIndex == x' = acc + y' + x'
   | otherwise = cursorXYToStringIndex (Cursor x' y') t (acc + h) (lineIndex + 1)
 
 -- Splits a string into a list of lines, spliting them with line breaks '\r\n' and '\n'.
@@ -132,7 +131,7 @@ updateLinesSizes inputChar (Cursor x' y') linesSizes
   | otherwise = beforeCursor ++ [cursorLineSize + 1] ++ afterCursor
   where
     (beforeCursor, fromCursor) = splitAt x' linesSizes
-    cursorLineSize = if length fromCursor == 0 then 0 else head fromCursor
+    cursorLineSize = if null fromCursor then 0 else head fromCursor
     afterCursor
       | null fromCursor = []
       | otherwise = tail fromCursor

@@ -2,7 +2,7 @@ module Editor.FileManager where
 
 import Editor.EditorState
   ( EditorState
-      ( commandText,
+      ( commandBuffer,
         extendedPieceTable,
         fileStatus,
         filename,
@@ -15,11 +15,8 @@ import Editor.EditorState
 import Editor.ExtendedPieceTable
 import Editor.StatusBar
 import System.Directory (doesFileExist, getPermissions, renameFile, writable)
-import System.Exit (exitSuccess)
-import System.IO ()
 import System.Posix.User (getEffectiveUserID)
 
--- Self-explanatory, also ugly
 saveFile :: EditorState -> Bool -> [Char] -> IO EditorState
 saveFile state force args = do
   let fname = if null args then filename state else args
@@ -51,7 +48,6 @@ splitDirAndFileName path =
       newDirname = reverse reversedDirname
   in (newFilename, newDirname)
 
--- Self-explanatory
 writeToFile :: EditorState -> FilePath -> IO EditorState
 writeToFile state fname' = do
   let (fname, dname) = splitDirAndFileName fname'
@@ -64,16 +60,14 @@ writeToFile state fname' = do
         statusBar = clearError (statusBar state),
         filename = if null (filename state) then fname else filename state,
         fileStatus = Saved,
-        commandText = ""
+        commandBuffer = ""
       }
 
--- Self-explanatory, also wrong place? lol
 quitEditor :: EditorState -> IO EditorState
 quitEditor state
   | fileStatus state == NotSaved = return $ setError state "No write since last change. Use \"w\" or \"q!\" to quit without saving."
   | otherwise = return state {mode = Closed}
 
--- Self-explanatory
 saveAndQuit :: EditorState -> Bool -> [Char] -> IO EditorState
 saveAndQuit state force args = do
   newState <- saveFile state force args
@@ -82,10 +76,8 @@ saveAndQuit state force args = do
     Exception -> return newState
     NoException -> return newState {mode = Closed}
 
--- Self-explanatory
 setError :: EditorState -> String -> EditorState
-setError state msg = state {mode = Normal, statusBar = (statusBar state) {statusMode = Exception, errorMessage = msg}, commandText = ""}
+setError state msg = state {mode = Normal, statusBar = (statusBar state) {statusMode = Exception, errorMessage = msg}, commandBuffer = ""}
 
--- Self-explanatory
 clearError :: StatusBar -> StatusBar
 clearError sBar = sBar {statusMode = NoException, errorMessage = ""}
