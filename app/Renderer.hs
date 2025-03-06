@@ -16,10 +16,10 @@ import Terminal.Render
 -- Renders the current state of the editor: the Viewport (actual content of the file), the status bar (which contains essential information about the editor state and the file) and renders the correct state of the cursor (position and style).
 -- @param editorState :: EditorState -> current state of the editor.
 renderState :: EditorState -> IO ()
-renderState (EditorState mode' extendedPieceTable' cursor' viewport' _ filename' statusBar' commandText' undoStack' redoStack' visualModeStartIndex' copyBuffer') = do
+renderState (EditorState mode' extendedPieceTable' cursor' viewport' _ filename' statusBar' commandText' undoStack' redoStack' visualModeStartIndex' copyBuffer' searchBuffer') = do
   clearScreen
   renderViewport extendedPieceTable' cursor' viewport' filename'
-  renderStatusBar mode' viewport' cursor' filename' (statusMode statusBar') (errorMessage statusBar') commandText' extendedPieceTable' undoStack' redoStack' copyBuffer'
+  renderStatusBar mode' viewport' cursor' filename' (statusMode statusBar') (errorMessage statusBar') commandText' extendedPieceTable' undoStack' redoStack' copyBuffer' searchBuffer'
   renderCursor mode' cursor' viewport'
 
 -- Renders the viewport, meaning that it renders all the contents of the files given the current dimensions of the viewport.
@@ -30,8 +30,8 @@ renderViewport extendedPieceTable' _ viewport' _ = do
   hFlush stdout
 
 -- Renders the status bar with mode, cursor position, file info, and errors.
-renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> String -> ExtendedPieceTable -> [EditorState] -> [EditorState] -> String -> IO ()
-renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText' extendedPieceTable' undoStack' redoStack' copyBuffer' = do
+renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> String -> ExtendedPieceTable -> [EditorState] -> [EditorState] -> String -> String -> IO ()
+renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText' extendedPieceTable' undoStack' redoStack' copyBuffer' searchBuffer' = do
   moveCursor (Cursor 0 (rows viewport'))
   putStr $ "| " ++ showMode ++ " | "
   -- putStr $ showPath ++ " | "
@@ -42,7 +42,7 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
       putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
       putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
-      putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      -- putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
       putStr $ "copyBuffer:" ++ copyBuffer' ++ " | "
       putStr $ show (length undoStack') ++ " u|r " ++ show (length redoStack') ++ " | "
       putStr $ "iC" ++ show initialColumn' ++ "iR" ++ show initialRow'
@@ -52,15 +52,25 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
       putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
     Insert -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      -- putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
       -- putStr $ "iBuf:" ++ insertBuffer ++ " | "
       -- putStr $ "oBuf:" ++ show originalBuffer ++ " | "
       -- putStr $ "aBuf:" ++ show addBuffer ++ " | "
       -- putStr $ show (piecesCollToString pieces)
-      -- putStr $ "iC" ++ show initialColumn' ++ "iR" ++ show initialRow'
+      putStr $ "iC" ++ show initialColumn' ++ "iR" ++ show initialRow'
     Replace -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
       putStr $ "siz:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+    Substitution -> do
+      putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
+      putStr $ show (rows viewport') ++ "x" ++ show (columns viewport') ++ " | "
+      putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
+      putStr $ searchBuffer' ++ " | "
+      -- putStr $ "sizes:" ++ show linesSizes ++ " | stidx:" ++ show insertStartIndex ++ " | "
+      -- putStr $ "iBuf:" ++ insertBuffer ++ " | "
+      -- putStr $ "oBuf:" ++ show originalBuffer ++ " | "
+      -- putStr $ "aBuf:" ++ show addBuffer ++ " | "
+      -- putStr $ show (piecesCollToString pieces)
   where
     (Viewport rows' columns' initialRow' initialColumn') = viewport'
     -- putStr $ "iBuf:" ++ insertBuffer ++ " | "
@@ -81,6 +91,7 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
         Command -> "Command"
         Replace -> "Replace"
         Visual -> "Visual"
+        Substitution -> "Substitution"
 
     showPath =
       case sBarMode of
@@ -104,6 +115,7 @@ renderCursor curMode (Cursor x' y') viewport = do
     Replace -> putStr "\ESC[1 q"
     Insert -> putStr "\ESC[5 q"
     Command -> putStr "\ESC[5 q"
+    Substitution -> putStr "\ESC[5 q"
   hFlush stdout
 
 -- Renders lines in the terminal within a given viewport. (prints ~ for empty lines)

@@ -4,6 +4,8 @@ import Editor.EditorState
 import Editor.ExtendedPieceTable
 import Editor.Cursor
 import Data.Char (isAlphaNum, isSpace)
+import Data.List
+import Text.Regex
 
 import Utils
 
@@ -11,7 +13,7 @@ import Utils
 handleMotion :: EditorState -> [Char] -> IO EditorState 
 handleMotion currentState inputChar = do
   command <- 
-    if head inputChar `elem` "hjkl$wbxoutp" then 
+    if head inputChar `elem` "hjkl$wbxoutpnN" then 
       return inputChar
     else do
       restInput <- getRemainingInput inputChar
@@ -39,6 +41,8 @@ runMotion currentState motion
   | motion == "u" = return (undoEditorState currentState)
   | motion == "p" = return (pasteCopyBuffer currentState)
   | motion == "t" = return (redoEditorState currentState)
+  | motion == "n" = return (moveToNextRegexOccurence currentState)
+  | motion == "N" = return (moveToPreviousRegexOccurence currentState)
   | head motion == 'r' = return (replaceChar currentState (last motion))
   | otherwise = return currentState
 
@@ -145,22 +149,16 @@ undoEditorState currentState =
   let undoStack' = undoStack currentState
       redoStack' = redoStack currentState
 
-      -- Adiciona o estado atual ao Redo Stack
       newRedoStack
         | length undoStack' == 0 = redoStack' 
         | otherwise = addCurrentStateToRedoStack currentState redoStack'
 
-      -- Verifica se o Undo Stack está vazio
       (newUndoStack, oldEditorState) = 
         if null undoStack' 
         then ([], currentState) 
         else (init undoStack', last undoStack')
 
-  in oldEditorState 
-       { mode = Normal
-       , undoStack = newUndoStack
-       , redoStack = newRedoStack 
-       }
+  in oldEditorState { mode = Normal , undoStack = newUndoStack , redoStack = newRedoStack }
 
 redoEditorState :: EditorState -> EditorState
 redoEditorState currentState = 
@@ -178,11 +176,7 @@ redoEditorState currentState =
         | length redoStack' == 0 = undoStack'
         | otherwise = addCurrentStateToUndoStack currentState undoStack'
 
-  in oldEditorState 
-       { mode = Normal
-       , undoStack = newUndoStack
-       , redoStack = newRedoStack 
-       }      
+  in oldEditorState { mode = Normal , undoStack = newUndoStack , redoStack = newRedoStack }      
 
 moveToEndOfLine :: EditorState -> Bool -> EditorState
 moveToEndOfLine currentState insertModeOn = 
@@ -211,7 +205,50 @@ moveToPreviousWord currentState =
       newCursor = iterateToPreviousWordStart previousText (cursor currentState) linesSizes'
   in currentState {cursor = newCursor}
 
-iterateToNextBlankSpace :: String -> Cursor -> Cursor
+moveToNextRegexOccurence :: EditorState -> EditorState
+moveToNextRegexOccurence currentState
+  | searchBuffer currentState == "" = currentState
+  | otherwise = 
+    let fullText = extendedPieceTableToString (extendedPieceTable currentState)
+        (_, _, _, _, _, linesSizes') = (extendedPieceTable currentState)
+        stringIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0
+        remainingText = (drop stringIndex fullText)
+        regex = searchBuffer currentState
+        newCursor
+          | not (isInfixOf regex (drop 1 remainingText)) = cursor currentState
+          | otherwise = iterateToNextRegexOccurence regex (tail remainingText) (updateCursor 'l' (cursor currentState) linesSizes' False)
+    in currentState {cursor = newCursor}
+
+moveToPreviousRegexOccurence :: EditorState -> EditorState
+moveToPreviousRegexOccurence currentState
+  | searchBuffer currentState == "" = currentState
+  | otherwise = 
+    let fullText = extendedPieceTableToString (extendedPieceTable currentState)
+        (_, _, _, _, _, linesSizes') = (extendedPieceTable currentState)
+        stringIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0
+        previousText = (take stringIndex fullText)
+        regex = searchBuffer currentState
+        newCursor
+          | not (isInfixOf regex (init previousText)) = cursor currentState
+          | otherwise = iterateToPreviousRegexOccurence regex previousText (cursor currentState) linesSizes'
+    in currentState {cursor = newCursor}
+
+iterateToNextRegexOccurence :: String -> String -> Cursor -> Cursor
+iterateToNextRegexOccurence _ "" cursor = cursor
+iterateToNextRegexOccurence regex text cursor'
+  | take (length regex) text == regex = cursor'
+  | otherwise =
+    if (head text) `elem` "\r\n" then iterateToNextRegexOccurence regex (tail text) (Cursor ((x cursor') + 1) 0)
+    else iterateToNextRegexOccurence regex (tail text) (Cursor (x cursor') (y cursor' + 1))
+
+iterateToPreviousRegexOccurence :: String -> String -> Cursor -> [Int] -> Cursor
+iterateToPreviousRegexOccurence _ "" cursor' _ = cursor'
+iterateToPreviousRegexOccurence regex text cursor' linesSizes'
+  | drop (abs (length text - length regex)) text == regex = (Cursor (x cursor') (y cursor' - (length regex)))
+  | otherwise =
+    if (last text) `elem` "\r\n" then iterateToPreviousRegexOccurence regex (init text) (Cursor (x cursor' - 1) (linesSizes' !! (x cursor' - 1))) linesSizes'
+    else iterateToPreviousRegexOccurence regex (init text) (Cursor (x cursor') (y cursor' - 1)) linesSizes'
+
 iterateToNextBlankSpace "" cursor = cursor
 iterateToNextBlankSpace (c:cs) cursor
   | c `elem` "\r\n" = Cursor ((x cursor) + 1) 0

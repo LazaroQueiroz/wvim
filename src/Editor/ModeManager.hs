@@ -10,6 +10,7 @@ import System.Console.ANSI ()
 import System.Exit (exitSuccess)
 import System.IO ()
 import Utils
+import Text.Regex (mkRegex, subRegex)
 
 handleMode :: EditorState -> [Char] -> IO EditorState
 handleMode currentState inputChar =
@@ -18,9 +19,44 @@ handleMode currentState inputChar =
     Visual -> handleVisualMode currentState inputChar
     Insert -> handleInsertMode currentState inputChar
     Replace -> handleReplaceMode currentState inputChar
+    Substitution -> handleSubstitutionMode currentState inputChar
     Command -> handleCommandMode currentState inputChar
     _ -> return currentState
 
+
+handleSearch :: EditorState -> [Char] -> IO EditorState
+handleSearch currentState searchBuffer = do 
+  let segments = wordsWhen (== '/') searchBuffer
+  if length segments == 1 then do
+    return currentState { mode = Normal, searchBuffer = (segments !! 0) }
+  else if  length segments == 2 then do
+    return (replaceRegex currentState segments)
+  else
+    return currentState
+  -- | inputChar == "n" = 
+  --     return moveToNextRegexOccurence currentState
+
+-- Handles user input in Command mode, updating the editor state accordingly..
+handleSubstitutionMode :: EditorState -> String -> IO EditorState
+handleSubstitutionMode state inputChar
+  | inputChar == "\ESC" = return state {mode = Normal, searchBuffer = ""}
+  | inputChar == "\DEL" = deleteSearchText
+  | inputChar == "\n" = handleSearch state (searchBuffer state)
+  | otherwise = return $ state {searchBuffer = searchBuffer state ++ inputChar}
+  where
+    deleteSearchText
+      | null (searchBuffer state) = return state
+      | otherwise = return $ state {searchBuffer = init (searchBuffer state)}
+
+replaceRegex :: EditorState -> [String] -> EditorState
+replaceRegex currentState segments =
+  let extendedPieceTable' = extendedPieceTable currentState
+      currentEditorStateString = extendedPieceTableToString extendedPieceTable'
+      newEditorStateString = subRegex (mkRegex (segments !! 0)) currentEditorStateString (segments !! 1)
+      (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', linesSizes') = createExtendedPieceTable newEditorStateString
+      newInsertStartIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0
+      newExtendedPieceTable = (pieces', originalBuffer', addBuffer', insertBuffer', newInsertStartIndex, linesSizes')
+  in currentState { mode = Normal, extendedPieceTable = newExtendedPieceTable, searchBuffer = "" }
 
 handleVisualMode :: EditorState -> [Char] -> IO EditorState
 handleVisualMode currentState inputChar
@@ -45,6 +81,7 @@ handleNormalMode currentState inputChar
   | inputChar == "R" = switchMode currentState Replace False -- Switch to Replace Mode
   | inputChar `elem` ["v", "V"] = switchMode currentState Visual False -- Switch to Visual Mode
   | inputChar == ":" = switchMode currentState Command False -- Switch to Command mode
+  | inputChar == "/" = switchMode currentState {searchBuffer = ""} Substitution False -- Switch to Command mode
   | otherwise = do 
     newEditorState <- handleMotion currentState inputChar
     return newEditorState
@@ -210,4 +247,5 @@ switchMode currentState newMode moveCursor =
       let (_, _, _, _, _, linesSizes') = extendedPieceTable currentState
           currentCursorStringIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0
       in return currentState {mode = Visual, visualModeStartIndex = currentCursorStringIndex}
+    Substitution -> return currentState { mode = Substitution }
     _ -> return currentState

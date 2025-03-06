@@ -5,7 +5,7 @@ import Editor.ExtendedPieceTable
 import Editor.StatusBar
 import Editor.Viewport
 
-data Mode = Normal | Insert | Command | Replace | Visual | Closed deriving (Eq)
+data Mode = Normal | Insert | Command | Replace | Visual | Substitution | Closed deriving (Eq)
 
 data FileStatus = Saved | NotSaved deriving (Eq)
 
@@ -21,16 +21,17 @@ data EditorState = EditorState
     undoStack :: [EditorState],
     redoStack :: [EditorState],
     visualModeStartIndex :: Int,
-    copyBuffer :: String
+    copyBuffer :: String,
+    searchBuffer :: String
   }
 
 -- Creates an EditorState with default values.
 defaultEditorState :: Int -> Int -> String -> EditorState
-defaultEditorState rows' columns' filename' = EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] [] 0 ""
+defaultEditorState rows' columns' filename' = EditorState Normal (createExtendedPieceTable "") (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] [] 0 "" ""
 
 -- Creates an EditorState from a file with content.
 editorStateFromFile :: String -> Int -> Int -> String -> EditorState
-editorStateFromFile file rows' columns' filename' = EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] [] 0 ""
+editorStateFromFile file rows' columns' filename' = EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] [] 0 "" ""
 
 -- Updates the cursor position in the EditorState based on input direction.
 updateEditorStateCursor :: EditorState -> [Char] -> EditorState
