@@ -10,7 +10,7 @@ import Utils
 handleMotion :: EditorState -> [Char] -> IO EditorState
 handleMotion currentState inputChar = do
   command <-
-    if head inputChar `elem` "hjkl$wbxoutpnN"
+    if head inputChar `elem` "hjkl$wbxoutpnN^"
       then
         return inputChar
       else do
@@ -32,6 +32,7 @@ runMotion currentState motion
   | motion == "w" = return (moveToNextWord currentState)
   | motion == "b" = return (moveToPreviousWord currentState)
   | motion == "$" = return (moveToEndOfLine currentState False)
+  | motion == "^" = return (moveToStartOfLine currentState False)
   | motion == "dd" = return (removeLine currentState)
   | motion == "x" = return (deleteChar currentState)
   | motion == "o" = return (createNewLineBelow currentState)
@@ -167,6 +168,13 @@ moveToEndOfLine currentState insertModeOn =
       x' = x cursor'
       currentLineSize = linesSizes' !! x'
       newCursor = Cursor x' (currentLineSize - (if insertModeOn then 0 else 1))
+   in currentState {cursor = newCursor}
+
+moveToStartOfLine :: EditorState -> Bool -> EditorState
+moveToStartOfLine currentState insertModeOn =
+  let cursor' = cursor currentState
+      x' = x cursor'
+      newCursor = Cursor x' 0
    in currentState {cursor = newCursor}
 
 moveToNextWord :: EditorState -> EditorState
