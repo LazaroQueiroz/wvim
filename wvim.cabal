@@ -92,7 +92,5 @@ executable haskell
                    Editor.Viewport
                    InputHandler
                    Renderer
-                   Events
-                   Config
-                   Terminal.Render
+                   Render
                    Utils

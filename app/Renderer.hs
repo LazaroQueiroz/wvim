@@ -1,6 +1,5 @@
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
 module Renderer where
 
@@ -11,15 +10,15 @@ import Editor.StatusBar
 import Editor.Viewport
 import System.Console.ANSI (setCursorPosition)
 import System.IO (hFlush, stdout)
-import Terminal.Render
+import Render
 
 -- Renders the current state of the editor: the Viewport (actual content of the file), the status bar (which contains essential information about the editor state and the file) and renders the correct state of the cursor (position and style).
 -- @param editorState :: EditorState -> current state of the editor.
 renderState :: EditorState -> IO ()
-renderState (EditorState mode' extendedPieceTable' cursor' viewport' _ filename' statusBar' commandText' undoStack' redoStack' visualModeStartIndex' copyBuffer' searchBuffer') = do
+renderState (EditorState mode' extendedPieceTable' cursor' viewport' _ filename' statusBar' commandBuffer' undoStack' redoStack' visualModeStartIndex' copyBuffer' searchBuffer') = do
   clearScreen
   renderViewport extendedPieceTable' cursor' viewport' filename'
-  renderStatusBar mode' viewport' cursor' filename' (statusMode statusBar') (errorMessage statusBar') commandText' extendedPieceTable' undoStack' redoStack' copyBuffer' searchBuffer'
+  renderStatusBar mode' viewport' cursor' filename' (statusMode statusBar') (errorMessage statusBar') commandBuffer' extendedPieceTable' undoStack' redoStack' copyBuffer' searchBuffer'
   renderCursor mode' cursor' viewport'
 
 -- Renders the viewport, meaning that it renders all the contents of the files given the current dimensions of the viewport.
@@ -31,32 +30,22 @@ renderViewport extendedPieceTable' _ viewport' _ = do
 
 -- Renders the status bar with mode, cursor position, file info, and errors.
 renderStatusBar :: Mode -> Viewport -> Cursor -> String -> StatusMode -> String -> String -> ExtendedPieceTable -> [EditorState] -> [EditorState] -> String -> String -> IO ()
-renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText' extendedPieceTable' undoStack' redoStack' copyBuffer' searchBuffer' = do
+renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandBuffer' extendedPieceTable' undoStack' redoStack' copyBuffer' searchBuffer' = do
   moveCursor (Cursor 0 (rows viewport'))
   putStr $ "| " ++ showMode ++ " | "
   putStr $ showPath ++ " | "
   case mode' of
     Command -> do
-      putStr $ ":" ++ commandText'
-    Normal -> do
-      putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
-    Visual -> do
-      putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
-    Insert -> do
-      putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
-    Replace -> do
-      putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
-      putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
+      putStr $ ":" ++ commandBuffer'
     Substitution -> do
       putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
       putStr $ searchBuffer' ++ " | "
+    _ -> do
+      putStr $ show (x cursor' + 1) ++ ", " ++ show (y cursor' + 1) ++ " | "
+      putStr $ getLineProgress extendedPieceTable' cursor' (initialRow viewport') ++ " | "
   where
-    (Viewport rows' columns' initialRow' initialColumn') = viewport'
-
-    (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable'
+    (Viewport rows' columns' initialRow' initialColumn') = viewport' -- Debug purpose
+    (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extendedPieceTable' -- Debug purpose
 
     showFileName
       | null filename' = "None"
@@ -70,6 +59,7 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
         Replace -> "Replace"
         Visual -> "Visual"
         Substitution -> "Substitution"
+        _ -> "None"
 
     showPath =
       case sBarMode of
@@ -78,15 +68,15 @@ renderStatusBar mode' viewport' cursor' filename' sBarMode errorMsg commandText'
 
 -- Returns the cursor's vertical position as "Top", "Bot", or a percentage.
 getLineProgress :: ExtendedPieceTable -> Cursor -> Int -> String
-getLineProgress (_, _, _, _, _, linesSizes) cursor' initialRow'
+getLineProgress (_, _, _, _, _, linesSizes) cursor' _
   | x cursor' == 0 = "Top"
   | x cursor' == length linesSizes - 1 = "Bot"
   | otherwise = show ((x cursor' + 1) * 100 `div` length linesSizes) ++ "%"
 
 -- Renders the cursor in the terminal based on its position and style.
 renderCursor :: Mode -> Cursor -> Viewport -> IO ()
-renderCursor curMode (Cursor x' y') viewport = do
-  setCursorPosition (min (x' - (initialRow viewport)) ((rows viewport) - 2)) (min (y' - (initialColumn viewport)) ((columns viewport) - 1))
+renderCursor curMode (Cursor x' y') viewport' = do
+  setCursorPosition (min (x' - initialRow viewport') (rows viewport' - 2)) (min (y' - initialColumn viewport') (columns viewport' - 1))
   case curMode of
     Normal -> putStr "\ESC[1 q"
     Visual -> putStr "\ESC[1 q"
@@ -94,6 +84,7 @@ renderCursor curMode (Cursor x' y') viewport = do
     Insert -> putStr "\ESC[5 q"
     Command -> putStr "\ESC[5 q"
     Substitution -> putStr "\ESC[5 q"
+    _ -> putStr "\ESC[5 q"
   hFlush stdout
 
 -- Renders lines in the terminal within a given viewport. (prints ~ for empty lines)

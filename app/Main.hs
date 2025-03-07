@@ -9,7 +9,6 @@ import System.Console.ANSI
 import System.Directory (doesFileExist)
 import System.Environment (getArgs)
 import System.IO
-import System.Process (callCommand)
 
 -- Read a character with a brief timeout for distinguishing ESC vs arrow keys
 -- @return String that represents the character (composite or individual) received from the user.
@@ -43,39 +42,29 @@ setTerminalConfiguration = do
   clearScreen
 
 -- Sets the terminal configurations to disable input character buffering and input echoing (writing the input in the terminal as it is received) and start the main event loop.
--- TODO aplicar functors para simplificar os ifs
 main :: IO ()
 main = do
   args <- getArgs
-  Just (rows, columns) <- getTerminalSize
+  Just (rows', columns') <- getTerminalSize
   setTerminalConfiguration
 
   startingState <- case args of
-    [] -> return (defaultEditorState rows columns "") -- Default editor state if no args
+    [] -> return (defaultEditorState rows' columns' "") -- Default editor state if no args
     [nameOfTheFile] -> do
       exists <- doesFileExist nameOfTheFile -- Check if file exists
       if exists
         then do
           file <- readFile nameOfTheFile -- Read the file content
-          return (editorStateFromFile file rows columns nameOfTheFile) -- Create EditorState from file
+          return (editorStateFromFile file rows' columns' nameOfTheFile) -- Create EditorState from file
         else do
-          return (defaultEditorState rows columns nameOfTheFile) -- Return default state if file doesn't exist
-    _ -> return (defaultEditorState rows columns "") -- Fallback for extra arguments, use default state
+          return (defaultEditorState rows' columns' nameOfTheFile) -- Return default state if file doesn't exist
+    _ -> return (defaultEditorState rows' columns' "") -- Fallback for extra arguments, use default state
   eventLoop [startingState] 0
 
 -- Mantain the main recursion loop running. Based on the current editor state, it renders this state, process the user input and then process the new state based on it.
--- @param editorState :: EditorState - current state of the editor.
--- eventLoop :: EditorState -> IO ()
--- eventLoop = unfoldM step
---   where
---     step editorState = do
---       renderState editorState
---       inputString <- getCharRaw
---       newState <- handleKeyPress editorState inputString
---       return $ if isRunning newState then Just (updateEditorStateViewport newState) else Nothing
 eventLoop :: [EditorState] -> Int -> IO ()
 eventLoop states currentIndex = do
-  let currentState = (states !! currentIndex) 
+  let currentState = states !! currentIndex
       viewport' = viewport currentState
   renderState currentState
   inputChar <- getCharRaw
@@ -85,21 +74,20 @@ eventLoop states currentIndex = do
       "[" -> do
         let newIndex = max 0 (currentIndex - 1)  -- Movendo para o estado à esquerda
         eventLoop states newIndex
-      
+
       "]" -> do
         let newIndex = min (length states - 1) (currentIndex + 1)  -- Movendo para o estado à direita
         eventLoop states newIndex
-      
+
       "{" -> do
         let newState = defaultEditorState (rows viewport') (columns viewport') ""
             newStates = states ++ [newState]
         let newIndex = min (length newStates - 1) (currentIndex + 1)  -- O novo estado é adicionado à lista
         eventLoop newStates newIndex
-      
+
       _ -> handleOtherInput currentState inputChar states currentIndex
     else
       handleOtherInput currentState inputChar states currentIndex
-
 
 handleOtherInput :: EditorState -> String -> [EditorState] -> Int -> IO ()
 handleOtherInput currentState inputChar states currentIndex = do
@@ -119,10 +107,9 @@ handleOtherInput currentState inputChar states currentIndex = do
   else
     eventLoop newStates currentIndex
 
-
 replaceAt :: Int -> a -> [a] -> [a]
 replaceAt _ _ [] = []  -- Caso base: lista vazia
-replaceAt 0 newVal (x:xs) = newVal : xs  -- Substitui o primeiro elemento
+replaceAt 0 newVal (_:xs) = newVal : xs  -- Substitui o primeiro elemento
 replaceAt n newVal (x:xs)
   | n > 0     = x : replaceAt (n - 1) newVal xs  -- Recursão, decrementando n até atingir a posição
   | otherwise = xs  -- Caso em que n é negativo ou fora do alcance, retorna a lista sem alterações

@@ -1,9 +1,7 @@
 module Editor.Cursor where
 
-import Editor.Viewport
 import System.Console.ANSI ()
 import System.IO ()
-import Utils
 
 -- Initial Cursor Position
 data Cursor = Cursor {x :: Int, y :: Int} deriving (Show)
@@ -39,7 +37,7 @@ updateCursor input (Cursor x' y') linesSizes isInsertMode
   where
     maxY varX = max 0 ((linesSizes !! varX) - 1)
     extra varX
-      | isInsertMode && not ((linesSizes !! varX) == 0) = 1
+      | isInsertMode && ((linesSizes !! varX) /= 0) = 1
       | otherwise = 0
 
 -- Updates cursor position after text modifications

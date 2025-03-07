@@ -17,7 +17,7 @@ data EditorState = EditorState
     fileStatus :: FileStatus,
     filename :: String,
     statusBar :: StatusBar,
-    commandText :: String, -- Novo campo para armazenar o texto do comand
+    commandBuffer :: String, 
     undoStack :: [EditorState],
     redoStack :: [EditorState],
     visualModeStartIndex :: Int,
@@ -33,7 +33,6 @@ defaultEditorState rows' columns' filename' = EditorState Normal (createExtended
 editorStateFromFile :: String -> Int -> Int -> String -> EditorState
 editorStateFromFile file rows' columns' filename' = EditorState Normal (createExtendedPieceTable file) (Cursor 0 0) (defaultViewport rows' columns') Saved filename' (StatusBar NoException "") "" [] [] 0 "" ""
 
--- Updates the cursor position in the EditorState based on input direction.
 updateEditorStateCursor :: EditorState -> [Char] -> EditorState
 updateEditorStateCursor state direction
   | direction `elem` ["h", "j", "k", "l"] =
@@ -43,15 +42,18 @@ updateEditorStateCursor state direction
        in state {cursor = newCursor}
   | otherwise = state
 
+updateEditorStateViewport :: EditorState -> EditorState
+updateEditorStateViewport currentState =
+  let currentViewport = viewport currentState 
+      Cursor x' y' = cursor currentState
+      partiallyFixedViewport = updateViewport currentViewport (x', y')
+      newViewport = updateViewport partiallyFixedViewport (x', y') 
+  in currentState {viewport = newViewport}
+
 addCurrentStateToUndoStack :: EditorState -> [EditorState] -> [EditorState]
-addCurrentStateToUndoStack currentState undoStack' =
-  let (_, _, _, insertBuffer', _, _) = extendedPieceTable currentState
-      newUndoStack = undoStack' ++ [currentState {undoStack = [], redoStack = []}]
-  in newUndoStack
+addCurrentStateToUndoStack currentState undoStack' = undoStack' ++ [currentState {undoStack = [], redoStack = []}]
 
 addCurrentStateToRedoStack :: EditorState -> [EditorState] -> [EditorState]
-addCurrentStateToRedoStack currentState redoStack =
-  let (_, _, _, insertBuffer', _, _) = extendedPieceTable currentState
-      newRedoStack = [currentState {undoStack = [], redoStack = []}] ++ redoStack
-  in newRedoStack
+addCurrentStateToRedoStack currentState redoStack' = [currentState {undoStack = [], redoStack = []}] ++ redoStack'
+
 

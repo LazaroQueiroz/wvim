@@ -6,11 +6,8 @@ import Editor.MotionHandler
 import Editor.ExtendedPieceTable
 import Editor.FileManager
 import Editor.Viewport
-import System.Console.ANSI ()
-import System.Exit (exitSuccess)
-import System.IO ()
-import Utils
 import Text.Regex (mkRegex, subRegex)
+import Utils
 
 handleMode :: EditorState -> [Char] -> IO EditorState
 handleMode currentState inputChar =
@@ -23,18 +20,15 @@ handleMode currentState inputChar =
     Command -> handleCommandMode currentState inputChar
     _ -> return currentState
 
-
 handleSearch :: EditorState -> [Char] -> IO EditorState
-handleSearch currentState searchBuffer = do 
-  let segments = wordsWhen (== '/') searchBuffer
+handleSearch currentState searchBuffer' = do
+  let segments = wordsWhen (== '/') searchBuffer'
   if length segments == 1 then do
-    return currentState { mode = Normal, searchBuffer = (segments !! 0) }
+    return currentState { mode = Normal, searchBuffer = head segments }
   else if  length segments == 2 then do
     return (replaceRegex currentState segments)
   else
     return currentState
-  -- | inputChar == "n" = 
-  --     return moveToNextRegexOccurence currentState
 
 -- Handles user input in Command mode, updating the editor state accordingly..
 handleSubstitutionMode :: EditorState -> String -> IO EditorState
@@ -50,48 +44,43 @@ handleSubstitutionMode state inputChar
 
 replaceRegex :: EditorState -> [String] -> EditorState
 replaceRegex currentState segments =
-  let extendedPieceTable' = extendedPieceTable currentState
+  let newUndoStack = addCurrentStateToUndoStack currentState (undoStack currentState)
+      extendedPieceTable' = extendedPieceTable currentState
       currentEditorStateString = extendedPieceTableToString extendedPieceTable'
-      newEditorStateString = subRegex (mkRegex (segments !! 0)) currentEditorStateString (segments !! 1)
-      (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', linesSizes') = createExtendedPieceTable newEditorStateString
+      newEditorStateString = subRegex (mkRegex (head segments)) currentEditorStateString (segments !! 1)
+      (pieces', originalBuffer', addBuffer', insertBuffer', _, linesSizes') = createExtendedPieceTable newEditorStateString
       newInsertStartIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0
       newExtendedPieceTable = (pieces', originalBuffer', addBuffer', insertBuffer', newInsertStartIndex, linesSizes')
-  in currentState { mode = Normal, extendedPieceTable = newExtendedPieceTable, searchBuffer = "" }
+  in currentState { mode = Normal, extendedPieceTable = newExtendedPieceTable, searchBuffer = "", undoStack = newUndoStack }
 
 handleVisualMode :: EditorState -> [Char] -> IO EditorState
 handleVisualMode currentState inputChar
   | inputChar == "\ESC" = return (currentState {mode = Normal})
   | inputChar == "v" = do
-    let (_, _, _, _, _, linesSizes') = extendedPieceTable currentState 
+    let (_, _, _, _, _, linesSizes') = extendedPieceTable currentState
         currentCursorStringIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0
         extendedPieceTable' = extendedPieceTable currentState
         currentEditorStateString = extendedPieceTableToString extendedPieceTable'
-        visualModeStartIndex' = (visualModeStartIndex currentState)
-        newCopyBuffer = take ((abs (visualModeStartIndex' - currentCursorStringIndex)) + 1) (drop (min visualModeStartIndex' currentCursorStringIndex) currentEditorStateString)
+        visualModeStartIndex' = visualModeStartIndex currentState
+        newCopyBuffer = take (abs (visualModeStartIndex' - currentCursorStringIndex) + 1) (drop (min visualModeStartIndex' currentCursorStringIndex) currentEditorStateString)
     return currentState {mode = Normal, copyBuffer = newCopyBuffer}
-  | otherwise = do
-    newEditorState <- handleMotion currentState inputChar
-    return newEditorState
-
+  | otherwise = handleMotion currentState inputChar
 
 -- Handles user input in Normal mode, updating the editor state accordingly.
 handleNormalMode :: EditorState -> [Char] -> IO EditorState
 handleNormalMode currentState inputChar
-  | inputChar `elem` ["i", "I", "\ESC[2~"] = switchMode currentState Insert False -- Switch to Insert Mode
+  | inputChar `elem` ["i", "I"] = switchMode currentState Insert False -- Switch to Insert Mode
   | inputChar `elem` ["a", "A"] = switchMode currentState Insert True -- Switch to Insert Mode (Alternative)
-  | inputChar == "R" = switchMode currentState Replace False -- Switch to Replace Mode
   | inputChar `elem` ["v", "V"] = switchMode currentState Visual False -- Switch to Visual Mode
+  | inputChar == "R" = switchMode currentState Replace False -- Switch to Replace Mode
   | inputChar == ":" = switchMode currentState Command False -- Switch to Command mode
   | inputChar == "/" = switchMode currentState {searchBuffer = ""} Substitution False -- Switch to Command mode
-  | otherwise = do 
-    newEditorState <- handleMotion currentState inputChar
-    return newEditorState
+  | otherwise = handleMotion currentState inputChar
 
 -- Handles user input in Replace mode, updating the editor state accordingly.
 handleReplaceMode :: EditorState -> [Char] -> IO EditorState
 handleReplaceMode currentState inputChar
   | inputChar == "\ESC" = switchMode currentState Normal False -- Switch to Normal mode
-  | inputChar == "\ESC[2~" = switchMode currentState Insert False -- Switch to Insert Mode
   | inputChar == "\n" = handleInsert currentState inputChar -- Just do it
   | inputChar == "\DEL" = handleBackspace
   | otherwise = handleReplace currentState inputChar
@@ -101,7 +90,6 @@ handleReplaceMode currentState inputChar
       | not (null insertBuffer) = handleDelete currentState
       | otherwise =
           let newCursor = updateCursor 'h' (cursor currentState) lineSizes True
-              (Viewport _ _ initialRow' initialColumn') = viewport currentState
               newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
               newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
            in return currentState {cursor = newCursor, extendedPieceTable = newExtendedPieceTable}
@@ -110,8 +98,6 @@ handleReplaceMode currentState inputChar
 handleInsertMode :: EditorState -> [Char] -> IO EditorState
 handleInsertMode currentState inputChar
   | inputChar == "\ESC" = switchMode currentState Normal False -- Switch to Normal mode
-  | inputChar == "\ESC[2~" = switchMode currentState Replace False -- Switch to Replace Mode
-  | inputChar == "\ESC[3~" = return currentState -- TODO: Delete character on cursor
   | inputChar == "\DEL" && x' == 0 && y' == 0 && initialColumn (viewport currentState) == 0 && initialRow (viewport currentState) == 0 = return currentState -- Don't delete character
   | inputChar == "\DEL" = handleDelete currentState -- Delete character before cursor
   | otherwise = handleInsert currentState inputChar -- Inserts character
@@ -121,14 +107,14 @@ handleInsertMode currentState inputChar
 -- Handles user input in Command mode, updating the editor state accordingly..
 handleCommandMode :: EditorState -> String -> IO EditorState
 handleCommandMode state inputChar
-  | inputChar == "\ESC" = return state {mode = Normal, commandText = ""}
-  | inputChar == "\DEL" = deleteCommandText
-  | inputChar == "\n" = handleCommand state (commandText state)
-  | otherwise = return $ state {commandText = commandText state ++ inputChar}
+  | inputChar == "\ESC" = return state {mode = Normal, commandBuffer = ""}
+  | inputChar == "\DEL" = deletecommandBuffer
+  | inputChar == "\n" = handleCommand state (commandBuffer state)
+  | otherwise = return $ state {commandBuffer = commandBuffer state ++ inputChar}
   where
-    deleteCommandText
-      | null (commandText state) = return state
-      | otherwise = return $ state {commandText = init (commandText state)}
+    deletecommandBuffer
+      | null (commandBuffer state) = return state
+      | otherwise = return $ state {commandBuffer = init (commandBuffer state)}
 
 -- Handles the command when the user presses "Enter"
 handleCommand :: EditorState -> String -> IO EditorState
@@ -136,8 +122,7 @@ handleCommand state inputString
   | command == "w" = saveFile state False args
   | command == "w!" = saveFile state True args
   | command == "q" = quitEditor state
-  | command == "q!" = 
-      return state {mode = Closed}
+  | command == "q!" = return state {mode = Closed}
   | command == "wq" = saveAndQuit state False args
   | command == "wq!" = saveAndQuit state True args
   | otherwise = return $ setError state "Command not found."
@@ -150,8 +135,6 @@ handleInsert :: EditorState -> [Char] -> IO EditorState
 handleInsert currentState inputChar = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
-      (Cursor x' y') = cursor currentState
-      (Viewport rows' columns' initialRow' initialColumn') = viewport currentState
       newInsertBuffer = insertBuffer ++ inputChar
       newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
       newCursor = updateCursorPosition (cursor currentState) inputChar 0
@@ -163,7 +146,7 @@ handleDelete :: EditorState -> IO EditorState
 handleDelete currentState = do
   let extPieceTable = extendedPieceTable currentState
       (pieces, originalBuffer, addBuffer, insertBuffer, insertStartIndex, linesSizes) = extPieceTable
-      Cursor x' y' = cursor currentState
+      Cursor x' _ = cursor currentState
       newLinesSizes = updateLinesSizes "\DEL" (cursor currentState) linesSizes
       newCursor = updateCursorPosition (cursor currentState) "\DEL" (linesSizes !! (x' - 1))
       newExtendedPieceTable
@@ -186,8 +169,7 @@ handleReplace currentState inputChar = do
       tempPieceTable = (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, linesSizes)
       newExtendedPieceTable
         | (linesSizes !! x') < y' =
-            let (Viewport rows' columns' initialRow' initialColumn') = viewport currentState
-                newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
+            let newLinesSizes = updateLinesSizes inputChar (cursor currentState) linesSizes
              in (pieces, originalBuffer, addBuffer, newInsertBuffer, insertStartIndex, newLinesSizes)
         | otherwise =
             let (pieces', originalBuffer', addBuffer', insertBuffer', insertStartIndex', newLinesSizes) = deleteText (insertStartIndex + 1) 1 tempPieceTable
@@ -200,21 +182,12 @@ switchMode currentState newMode moveCursor =
   case newMode of
     Normal ->
       let extPieceTable = extendedPieceTable currentState
-
-          -- insert text
           newExtendedPieceTable = insertText extPieceTable
-          (Cursor x' y') = (cursor currentState)
           (_, _, _, _, _, linesSizes') = newExtendedPieceTable
           newCursor = updateCursor 'h' (cursor currentState) linesSizes' False
-
-          -- get new undo stack
-          (_, _, _, insertBuffer', _, _) = extPieceTable
-          undoStack' = undoStack currentState
-          -- newUndoStack = addCurrentStateToUndoStack currentState {extendedPieceTable = newExtendedPieceTable, cursor = newCursor} undoStack'
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor} -- CVH
     Insert ->
-      let (Viewport _ _ initialRow' initialColumn') = viewport currentState
-          (pieces, originalBuffer, addBuffer, insertBuffer, _, linesSizes) = extendedPieceTable currentState
+      let (pieces, originalBuffer, addBuffer, insertBuffer, _, linesSizes) = extendedPieceTable currentState
           newCursor
             | moveCursor = updateCursor 'l' (cursor currentState) linesSizes True
             | otherwise = cursor currentState
@@ -224,7 +197,7 @@ switchMode currentState newMode moveCursor =
           previousEditorState
             | null undoStack' = currentState
             | otherwise = last undoStack'
-          previousEditorStateExtendedPieceTable = (extendedPieceTable previousEditorState)
+          previousEditorStateExtendedPieceTable = extendedPieceTable previousEditorState
           previousEditorStateString
             | null undoStack' = "*"
             | otherwise = extendedPieceTableToString previousEditorStateExtendedPieceTable
@@ -237,13 +210,12 @@ switchMode currentState newMode moveCursor =
 
     Replace ->
       let (pieces, originalBuffer, addBuffer, insertBuffer, _, lineSizes) = insertText (extendedPieceTable currentState)
-          (Viewport _ _ initialRow' initialColumn') = viewport currentState
           newCursor = updateCursor 'R' (cursor currentState) lineSizes True
           newInsertStartIndex = cursorXYToStringIndex newCursor lineSizes 0 0
           newExtendedPieceTable = (pieces, originalBuffer, addBuffer, insertBuffer, newInsertStartIndex, lineSizes)
        in return currentState {mode = newMode, extendedPieceTable = newExtendedPieceTable, cursor = newCursor}
     Command -> return currentState {mode = Command}
-    Visual -> 
+    Visual ->
       let (_, _, _, _, _, linesSizes') = extendedPieceTable currentState
           currentCursorStringIndex = cursorXYToStringIndex (cursor currentState) linesSizes' 0 0
       in return currentState {mode = Visual, visualModeStartIndex = currentCursorStringIndex}
