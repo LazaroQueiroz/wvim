@@ -53,6 +53,7 @@ To use a multiplier, type a number followed by the motion
 - `x` - delete current character
 - `w` - move to next word
 - `b` - move to previous word
+- `r<new char>` - replaces the character under the cursor for the new char typed
 
 The commands below cannot be used with multipliers
 
