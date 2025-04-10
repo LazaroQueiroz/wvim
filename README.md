@@ -4,7 +4,7 @@ Worse Vim is a text editor, inspired by Vim, written in Haskell and Prolog. Crea
 ---
 
 ![Haskell](https://img.shields.io/badge/Haskell-Done-green?style=flat-square&logo=haskell&labelColor=%235D4F85) 
-![Prolog](https://img.shields.io/badge/Prolog-In_processing-red?style=flat-square&labelColor=%23184e60)
+![Prolog](https://img.shields.io/badge/Prolog-Done-green?style=flat-square&labelColor=%23184e60)
 
 ## 🛠️ Features
 ✅ Basic cursor movement
@@ -29,7 +29,8 @@ Follow the step-by-step below in order to get it working:
 4. Compile the text editor using `cabal build` and run it with `cabal run haskell`.
 
 ### 🔹 Prolog
-1. Work In Progress
+1. Access the link below and follow the instructions there.
+2. [wvim-prolog](https://github.com/LazaroQueiroz/wvim-prolog)
 
 ## 📌 Development Team
 * [Lázaro Queiroz do Nascimento](https://github.com/LazaroQueiroz)
